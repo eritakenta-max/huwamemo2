@@ -1,0 +1,3230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ふわメモ ✿</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@300;400;500;700&family=M+PLUS+Rounded+1c:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0eb;
+    --surface: #fdfaf7;
+    --sidebar: #f0ebe5;
+    --accent: #c9a0a0;
+    --accent2: #a0b8c9;
+    --accent3: #a9c4a0;
+    --text: #4a3f3a;
+    --text-light: #8a7a74;
+    --border: #e0d8d0;
+    --shadow: rgba(150,120,100,0.12);
+    --pin: #e8b4a0;
+    --sidebar-w: 220px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: 'M PLUS Rounded 1c', 'Zen Maru Gothic', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body { display: flex; }
+
+  /* ====== SIDEBAR OVERLAY (mobile) ====== */
+  #sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(74,63,58,0.38);
+    z-index: 40;
+    backdrop-filter: blur(2px);
+  }
+  #sidebar-overlay.open { display: block; }
+
+  /* ====== SIDEBAR ====== */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--sidebar);
+    border-right: 1.5px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0 16px;
+    z-index: 50;
+    transition: transform 0.28s cubic-bezier(.4,0,.2,1);
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    padding: 0 20px 20px;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo span { font-size: 26px; }
+
+  .sidebar-section {
+    padding: 6px 12px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ====== CATEGORY ITEM (フォルダ削除ボタン対応) ====== */
+  .category-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 20px;
+    border-radius: 12px;
+    margin: 2px 10px;
+    cursor: pointer;
+    font-size: 13.5px;
+    color: var(--text);
+    transition: all 0.18s ease;
+    user-select: none;
+    position: relative;
+  }
+  .category-item:hover { background: rgba(200,160,140,0.12); }
+  .category-item.active {
+    background: linear-gradient(135deg,rgba(201,160,160,0.22),rgba(160,184,201,0.14));
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .category-item .cat-icon { font-size: 17px; flex-shrink: 0; }
+  .category-item .cat-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    max-width: 100px;
+  }
+  .category-item .cat-count {
+    background: var(--border);
+    color: var(--text-light);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 20px;
+    min-width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .category-item.active .cat-count { background: var(--accent); color: #fff; }
+
+  /* フォルダ選択モード */
+  .category-item.folder-selected {
+    background: linear-gradient(135deg,rgba(201,160,160,0.28),rgba(160,184,201,0.2));
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+  body.folder-select-mode .category-item { cursor: default; }
+
+  /* フォルダ操作ボタン（編集・削除）: 長押し選択後に表示 */
+  .cat-actions {
+    display: none;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  /* PCホバー時は表示。モバイルは長押し選択後のみ */
+  @media (hover: hover) {
+    .category-item:hover .cat-actions { display: flex; }
+  }
+  .category-item.folder-selected .cat-actions { display: flex; }
+
+  /* フォルダゴミ箱セクション */
+  .folder-trash-section {
+    margin: 4px 10px;
+  }
+  .folder-trash-toggle {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 10px;
+    cursor: pointer; font-size: 12px; color: var(--text-light);
+    transition: all 0.18s;
+    user-select: none;
+  }
+  .folder-trash-toggle:hover { background: rgba(220,100,80,0.08); color: #c9705a; }
+  .folder-trash-list {
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+  }
+  .folder-trash-list.open { display: flex; }
+  .deleted-cat-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 10px;
+    font-size: 12.5px; color: var(--text-light);
+    background: rgba(220,100,80,0.05);
+  }
+  .deleted-cat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  .deleted-cat-restore {
+    background: rgba(100,180,120,0.15); color: #3a9a60;
+    border: none; border-radius: 8px; padding: 3px 9px;
+    font-size: 11px; font-family: inherit; font-weight: 700;
+    cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  }
+  .deleted-cat-restore:hover { background: rgba(100,180,120,0.30); }
+  .deleted-cat-purge {
+    background: rgba(220,80,60,0.1); color: #c9605a;
+    border: none; border-radius: 8px; padding: 3px 8px;
+    font-size: 11px; font-family: inherit;
+    cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  }
+  .deleted-cat-purge:hover { background: rgba(220,80,60,0.22); }
+
+  .cat-edit-btn, .cat-delete-btn {
+    width: 22px; height: 22px;
+    border: none; border-radius: 6px; cursor: pointer;
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .cat-edit-btn {
+    background: rgba(100,160,220,0.12);
+    color: #4a80c4;
+  }
+  .cat-edit-btn:hover { background: rgba(100,160,220,0.28); }
+  .cat-delete-btn {
+    background: rgba(220,80,60,0.1);
+    color: #c9605a;
+  }
+  .cat-delete-btn:hover { background: rgba(220,80,60,0.22); }
+
+  .add-cat-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 20px; margin: 4px 10px;
+    border-radius: 10px; cursor: pointer;
+    font-size: 12.5px; color: var(--text-light);
+    border: 1.5px dashed var(--border);
+    transition: all 0.18s;
+  }
+  .add-cat-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(201,160,160,0.06); }
+
+  /* デフォルトカラー設定ボタン */
+  .default-color-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 20px; margin: 2px 10px;
+    border-radius: 10px; cursor: pointer;
+    font-size: 12px; color: var(--text-light);
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: inherit;
+    transition: all 0.18s;
+  }
+  .default-color-btn:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(160,184,201,0.08); }
+  .default-color-swatch {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1.5px solid rgba(0,0,0,0.12); flex-shrink: 0;
+  }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 12px 20px; }
+
+  .trash-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 20px; border-radius: 12px; margin: 2px 10px;
+    cursor: pointer; font-size: 13px; color: var(--text-light);
+    transition: all 0.18s;
+  }
+  .trash-item:hover { background: rgba(220,100,80,0.08); color: #c9705a; }
+  .trash-item.active { color: #c9705a; background: rgba(220,100,80,0.10); }
+
+  /* ====== MAIN ====== */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ====== TOPBAR ====== */
+  #topbar {
+    background: var(--surface);
+    border-bottom: 1.5px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  #menu-btn {
+    display: none;
+    width: 38px; height: 38px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 18px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text);
+    transition: background 0.15s;
+  }
+  #menu-btn:hover { background: var(--border); }
+
+  .topbar-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+    max-width: 120px;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .search-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 24px;
+    padding: 7px 13px;
+    gap: 7px;
+    flex: 1;
+    min-width: 0;
+    transition: border-color 0.18s;
+  }
+  .search-wrap:focus-within { border-color: var(--accent); }
+  .search-wrap input {
+    border: none; background: transparent; outline: none;
+    font-family: inherit; font-size: 13px; color: var(--text); width: 100%;
+  }
+  .search-wrap input::placeholder { color: var(--text-light); }
+
+  .new-note-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg,#c9a0a0,#b8a0c4);
+    color: #fff; border: none; border-radius: 20px;
+    padding: 9px 16px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 3px 10px rgba(160,120,120,0.25);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .new-note-btn:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(160,120,120,0.32); }
+  .new-note-btn:active { transform: translateY(0); }
+  .new-note-btn .btn-label { display: inline; }
+
+  /* ====== 一括選択モード トップバー ====== */
+  #multiselect-bar {
+    display: none;
+    background: linear-gradient(135deg,#c9a0a0,#b8a0c4);
+    padding: 10px 16px;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  #multiselect-bar.active { display: flex; }
+  .multiselect-count {
+    flex: 1; font-size: 14px; font-weight: 700; color: #fff;
+  }
+  .multiselect-trash-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.2); color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.5);
+    border-radius: 16px; padding: 7px 14px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .multiselect-trash-btn:hover { background: rgba(255,255,255,0.32); }
+  .multiselect-cancel-btn {
+    background: rgba(255,255,255,0.12); color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 16px; padding: 7px 14px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .multiselect-cancel-btn:hover { background: rgba(255,255,255,0.22); }
+
+  /* ====== CONTENT ====== */
+  #content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px 100px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #content::-webkit-scrollbar { width: 5px; }
+  #content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+
+  .pinned-section-label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 700; color: var(--text-light);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .pinned-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ====== NOTES GRID ====== */
+  .notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 80px 20px;
+    color: var(--text-light); gap: 14px;
+  }
+  .empty-state .empty-icon { font-size: 56px; opacity: 0.5; }
+  .empty-state p { font-size: 14px; text-align: center; white-space: pre-line; }
+
+  /* ====== NOTE CARD ====== */
+  .note-card {
+    background: #fef9d7;
+    border-radius: 16px;
+    padding: 15px;
+    box-shadow: 0 2px 8px var(--shadow), 0 0 0 1px rgba(0,0,0,0.04);
+    position: relative;
+    transition: transform 0.18s, box-shadow 0.18s;
+    cursor: pointer;
+    min-height: 130px;
+    display: flex; flex-direction: column; gap: 9px;
+    animation: noteIn 0.28s ease;
+    overflow: hidden;
+    resize: both;
+    min-width: 160px;
+  }
+  @keyframes noteIn {
+    from { opacity: 0; transform: scale(0.93) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .note-card:hover { transform: translateY(-3px) rotate(0.4deg); box-shadow: 0 6px 20px var(--shadow); z-index: 2; }
+  .note-card.dragging {
+    opacity: 0.55;
+    transform: scale(1.04) rotate(1.5deg) !important;
+    box-shadow: 0 12px 32px rgba(150,120,100,0.28) !important;
+    z-index: 999 !important;
+    cursor: grabbing !important;
+    transition: none;
+  }
+  .note-card.drag-over {
+    outline: 2.5px dashed var(--accent);
+    outline-offset: 3px;
+  }
+  .note-card.pinned::before {
+    content: '📌';
+    position: absolute; top: -2px; right: 10px;
+    font-size: 17px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+  }
+
+  /* 一括選択モード: カード選択状態 */
+  .note-card.multiselect-selected {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+    transform: scale(0.97) !important;
+    box-shadow: 0 0 0 3px rgba(201,160,160,0.35), 0 4px 16px var(--shadow) !important;
+  }
+  .note-card .select-check {
+    display: none;
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+    z-index: 5;
+    pointer-events: none;
+  }
+  body.multiselect-mode .note-card .select-check { display: flex; background: rgba(255,255,255,0.7); color: transparent; border: 2px solid rgba(0,0,0,0.15); }
+  body.multiselect-mode .note-card.multiselect-selected .select-check { background: var(--accent); color: #fff; border-color: var(--accent); }
+  body.multiselect-mode .note-card { cursor: pointer; }
+  body.multiselect-mode .note-card:hover { transform: scale(0.98) !important; box-shadow: 0 4px 12px var(--shadow) !important; }
+
+  /* リサイズハンドル */
+  .note-resize-handle {
+    position: absolute;
+    bottom: 4px; right: 4px;
+    width: 16px; height: 16px;
+    cursor: nwse-resize;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-light);
+    font-size: 10px;
+    pointer-events: all;
+  }
+  .note-card:hover .note-resize-handle { opacity: 1; }
+  .note-resize-handle::after {
+    content: '';
+    display: block;
+    width: 10px; height: 10px;
+    border-right: 2px solid var(--text-light);
+    border-bottom: 2px solid var(--text-light);
+    border-radius: 0 0 3px 0;
+  }
+
+  .note-card-top { display: flex; align-items: center; gap: 6px; }
+  .note-title-display {
+    font-size: 13.5px; font-weight: 700;
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .note-actions { display: none; gap: 3px; }
+  .note-card:hover .note-actions { display: flex; }
+  body.multiselect-mode .note-card .note-actions { display: none !important; }
+  .note-action-btn {
+    width: 26px; height: 26px; border: none;
+    background: rgba(255,255,255,0.7); border-radius: 8px;
+    cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s; color: var(--text-light);
+  }
+  .note-action-btn:hover { background: rgba(255,255,255,0.95); color: var(--text); }
+  .note-action-btn.danger:hover { background: rgba(220,80,60,0.12); color: #c9605a; }
+
+  .note-body-preview {
+    font-size: 12px; line-height: 1.65;
+    flex: 1; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical;
+    opacity: 0.88;
+    word-break: break-word;
+  }
+  /* チェックリストのプレビュー表示調整 */
+  .note-body-preview .check-item {
+    display: flex; align-items: flex-start; gap: 5px;
+    pointer-events: none;
+  }
+  .note-body-preview .check-item span.done {
+    text-decoration: line-through; opacity: 0.5;
+  }
+
+  .note-stamps-card {
+    display: flex; flex-wrap: wrap; gap: 2px; margin-top: 2px;
+  }
+  .note-stamp-big { font-size: 20px; line-height: 1.1; }
+
+  .note-card-image {
+    width: calc(100% + 30px);
+    margin: 0 -15px;
+    display: block;
+    max-height: 180px;
+    object-fit: cover;
+    border-radius: 0;
+  }
+  .note-card-image.top { border-radius: 10px 10px 0 0; margin-top: -15px; margin-bottom: 4px; }
+  .note-card-image.bottom { border-radius: 0 0 10px 10px; margin-bottom: -15px; margin-top: 4px; }
+
+  .note-footer { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+  .note-date { font-size: 10px; color: var(--text-light); }
+  .note-cat-badge {
+    font-size: 10px; background: rgba(255,255,255,0.6);
+    color: var(--text-light); padding: 2px 8px; border-radius: 10px; font-weight: 600;
+  }
+  .note-task-badge {
+    font-size: 10px;
+    background: rgba(255,200,100,0.55);
+    color: #b06000;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ====== FAB (mobile new note) ====== */
+  #fab {
+    display: none;
+    position: fixed;
+    bottom: 24px; right: 20px;
+    width: 54px; height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#c9a0a0,#b8a0c4);
+    color: #fff; border: none;
+    font-size: 26px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(160,120,120,0.38);
+    z-index: 30;
+    align-items: center; justify-content: center;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #fab:active { transform: scale(0.92); }
+
+  /* ====== MODAL ====== */
+  #modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(74,63,58,0.35);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+  #modal-overlay.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  #modal {
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 680px;
+    max-height: 92vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 -8px 40px rgba(74,50,40,0.18);
+    animation: sheetIn 0.26s cubic-bezier(.4,0,.2,1);
+    overflow: hidden;
+  }
+  @keyframes sheetIn {
+    from { transform: translateY(40px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  #modal-handle {
+    width: 40px; height: 5px;
+    background: var(--border);
+    border-radius: 3px;
+    margin: 10px auto 4px;
+    flex-shrink: 0;
+  }
+
+  /* タイトル欄廃止 → ヘッダーは閉じるボタンのみ */
+  #modal-header {
+    padding: 4px 18px 8px;
+    display: flex; align-items: center; justify-content: flex-end;
+    flex-shrink: 0;
+  }
+
+  .modal-close {
+    width: 32px; height: 32px; border: none;
+    background: var(--border); border-radius: 10px;
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-light); transition: all 0.15s; flex-shrink: 0;
+  }
+  .modal-close:hover { background: rgba(220,80,60,0.12); color: #c9605a; }
+
+  #modal-toolbar {
+    padding: 8px 18px;
+    display: flex; align-items: center; gap: 5px;
+    border-bottom: 1.5px solid var(--border);
+    border-top: 1.5px solid var(--border);
+    flex-wrap: wrap; flex-shrink: 0;
+    overflow-x: auto;
+  }
+  #modal-toolbar::-webkit-scrollbar { display: none; }
+
+  .toolbar-btn {
+    width: 34px; height: 34px;
+    border: 1.5px solid var(--border); background: transparent;
+    border-radius: 9px; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text); transition: all 0.15s;
+    font-family: inherit; font-weight: 700; flex-shrink: 0;
+    position: relative;
+  }
+  .toolbar-btn:hover { background: var(--border); }
+  .toolbar-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #stamp-toggle-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(201,160,160,0.32);
+    transform: scale(1.08);
+  }
+
+  .toolbar-sep { width: 1px; height: 22px; background: var(--border); margin: 0 2px; flex-shrink: 0; }
+
+  .color-palette { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+  .color-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    cursor: pointer; border: 2.5px solid transparent;
+    transition: transform 0.15s, border-color 0.15s; flex-shrink: 0;
+  }
+  .color-dot:hover { transform: scale(1.2); }
+  .color-dot.selected { border-color: #4a3f3a; transform: scale(1.15); }
+
+  /* ====== マーカーカラーピッカー ====== */
+  .marker-popup {
+    position: absolute;
+    top: 38px; left: 0;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 10px;
+    display: none;
+    gap: 6px;
+    z-index: 200;
+    box-shadow: 0 6px 20px var(--shadow);
+    align-items: center;
+    white-space: nowrap;
+  }
+  .marker-popup.open { display: flex; }
+  .marker-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    cursor: pointer; border: 2.5px solid transparent;
+    transition: transform 0.15s, border-color 0.15s; flex-shrink: 0;
+  }
+  .marker-dot:hover { transform: scale(1.25); border-color: rgba(0,0,0,0.2); }
+  .marker-erase {
+    width: 24px; height: 24px; border-radius: 50%;
+    cursor: pointer; border: 2px solid var(--border);
+    background: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-light);
+    transition: transform 0.15s;
+  }
+  .marker-erase:hover { transform: scale(1.2); border-color: var(--accent); }
+
+  /* ====== 文字色ピッカー ====== */
+  .text-color-popup {
+    position: absolute;
+    top: 0; left: calc(100% + 6px);
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 10px;
+    display: none;
+    gap: 6px;
+    z-index: 200;
+    box-shadow: 0 6px 20px var(--shadow);
+    align-items: center;
+    white-space: nowrap;
+    flex-wrap: wrap;
+    max-width: 220px;
+  }
+  .text-color-popup.open { display: flex; }
+  .text-color-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    cursor: pointer; border: 2.5px solid transparent;
+    transition: transform 0.15s, border-color 0.15s; flex-shrink: 0;
+  }
+  .text-color-dot:hover { transform: scale(1.25); border-color: rgba(0,0,0,0.25); }
+  .text-color-reset {
+    width: 24px; height: 24px; border-radius: 50%;
+    cursor: pointer; border: 2px solid var(--border);
+    background: linear-gradient(135deg, #fff 50%, #333 50%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; transition: transform 0.15s;
+  }
+  .text-color-reset:hover { transform: scale(1.2); }
+
+  .toolbar-btn .color-indicator {
+    position: absolute;
+    bottom: 3px; left: 50%;
+    transform: translateX(-50%);
+    width: 14px; height: 3px;
+    border-radius: 2px;
+    background: #e05050;
+  }
+
+  #modal-body {
+    flex: 1; overflow-y: auto;
+    padding: 12px 18px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+  #modal-body::-webkit-scrollbar { width: 4px; }
+  #modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+
+  /* 1行目がタイトルになるエディタ：プレースホルダー調整 */
+  #note-editor {
+    min-height: 160px; outline: none;
+    font-family: inherit; font-size: 14.5px; line-height: 1.75;
+    color: var(--text); word-break: break-word;
+  }
+  #note-editor:empty::before {
+    content: attr(data-placeholder);
+    color: var(--text-light); pointer-events: none;
+  }
+  /* 1行目（タイトル相当）を太字で強調 */
+  #note-editor > *:first-child,
+  #note-editor > br:first-child + *,
+  #note-editor:not(:empty)::first-line {
+    font-weight: 700;
+    font-size: 16px;
+  }
+  #note-editor .check-item {
+    display: flex; align-items: flex-start; gap: 8px; padding: 3px 0;
+  }
+  #note-editor .check-item input[type="checkbox"] {
+    margin-top: 3px; accent-color: var(--accent);
+    width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
+  }
+  #note-editor .check-item span { flex: 1; outline: none; }
+  #note-editor .check-item span.done { text-decoration: line-through; opacity: 0.5; }
+  #note-editor mark { border-radius: 3px; padding: 0 2px; }
+
+  /* Stamp inserted in editor */
+  .stamp-inline {
+    display: inline-block;
+    font-size: 26px;
+    line-height: 1.1;
+    vertical-align: middle;
+    margin: 1px 2px;
+    cursor: default;
+    user-select: none;
+    animation: stampPop 0.25s cubic-bezier(.3,1.5,.5,1);
+  }
+  @keyframes stampPop {
+    from { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+    to   { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  .note-images-area {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .note-image-thumb {
+    position: relative; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 3px 12px var(--shadow);
+    width: 100%;
+  }
+  .note-image-thumb img {
+    width: 100%; display: block;
+    max-height: 320px; object-fit: cover;
+    border-radius: 16px;
+  }
+  .note-image-thumb .remove-img {
+    position: absolute; top: 8px; right: 8px;
+    width: 28px; height: 28px;
+    background: rgba(0,0,0,0.5); color: #fff;
+    border: none; border-radius: 50%; cursor: pointer;
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .note-image-thumb:hover .remove-img { opacity: 1; }
+  @media (hover: none) { .note-image-thumb .remove-img { opacity: 1; } }
+
+  /* ====== STAMP SECTION ====== */
+  .stamp-section {
+    background: linear-gradient(135deg,rgba(255,240,245,0.8),rgba(240,245,255,0.8));
+    border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 13px 14px;
+    display: none;
+  }
+  .stamp-section.open { display: block; }
+  .stamp-section-title {
+    font-size: 11px; font-weight: 700; color: var(--text-light);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 9px; display: flex; align-items: center; gap: 6px;
+  }
+  .stamp-section-hint {
+    font-size: 11.5px; color: var(--text-light); margin-bottom: 9px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .stamp-tabs {
+    display: flex; gap: 5px; margin-bottom: 10px;
+    overflow-x: auto; padding-bottom: 2px;
+  }
+  .stamp-tabs::-webkit-scrollbar { display: none; }
+  .stamp-tab {
+    padding: 5px 12px; border-radius: 12px;
+    font-size: 11.5px; font-weight: 600; color: var(--text-light);
+    cursor: pointer; border: 1.5px solid var(--border);
+    background: white; transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+  }
+  .stamp-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .stamp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+    gap: 5px;
+  }
+  .stamp-btn {
+    width: 42px; height: 42px;
+    border: 1.5px solid transparent; background: white;
+    border-radius: 10px; cursor: pointer; font-size: 24px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .stamp-btn:hover { transform: scale(1.2); border-color: var(--accent); }
+  .stamp-btn:active { transform: scale(1.05); background: #fef0f0; }
+
+  /* ====== MODAL FOOTER ====== */
+  #modal-footer {
+    padding: 12px 18px;
+    border-top: 1.5px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .category-select {
+    border: 1.5px solid var(--border); background: var(--bg);
+    border-radius: 12px; padding: 7px 10px;
+    font-family: inherit; font-size: 13px; color: var(--text);
+    outline: none; cursor: pointer; transition: border-color 0.15s;
+    flex: 1; min-width: 100px;
+  }
+  .category-select:focus { border-color: var(--accent); }
+  .pin-toggle {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    cursor: pointer; font-size: 12.5px; color: var(--text-light);
+    background: transparent; font-family: inherit; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pin-toggle.pinned { border-color: var(--pin); color: #c07050; background: rgba(232,180,160,0.12); }
+  .save-btn {
+    background: linear-gradient(135deg,#a9c4a0,#a0b8c4);
+    color: #fff; border: none; border-radius: 14px;
+    padding: 9px 20px;
+    font-family: inherit; font-size: 13.5px; font-weight: 700;
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 3px 10px rgba(120,160,130,0.25);
+    white-space: nowrap;
+  }
+  .save-btn:hover { transform: translateY(-1px); }
+
+  /* ====== DIALOGS ====== */
+  #trash-confirm, #addcat-dialog, #default-color-dialog {
+    display: none; position: fixed; inset: 0;
+    background: rgba(74,63,58,0.4);
+    backdrop-filter: blur(3px);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  #trash-confirm.open, #addcat-dialog.open, #default-color-dialog.open { display: flex; }
+
+  .confirm-box, .addcat-box {
+    background: var(--surface); border-radius: 20px;
+    padding: 26px 28px; max-width: 340px; width: 90%;
+    box-shadow: 0 12px 40px rgba(74,50,40,0.18);
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(12px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .confirm-box { text-align: center; }
+  .confirm-box .confirm-icon { font-size: 46px; margin-bottom: 10px; }
+  .confirm-box h3 { font-size: 16px; margin-bottom: 8px; }
+  .confirm-box p { font-size: 13px; color: var(--text-light); margin-bottom: 20px; }
+  .confirm-btns { display: flex; gap: 10px; justify-content: center; }
+  .confirm-btn {
+    padding: 9px 20px; border-radius: 12px;
+    font-family: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; border: none; transition: all 0.15s;
+  }
+  .confirm-btn.cancel { background: var(--border); color: var(--text); }
+  .confirm-btn.cancel:hover { background: #d8d0c8; }
+  .confirm-btn.delete { background: linear-gradient(135deg,#e07060,#c05040); color: #fff; }
+  .confirm-btn.delete:hover { transform: translateY(-1px); }
+
+  .addcat-box h3 { font-size: 16px; margin-bottom: 14px; }
+  .addcat-row { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .addcat-emoji-input, .addcat-name-input {
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 9px 12px; font-family: inherit; font-size: 14px;
+    outline: none; transition: border-color 0.15s;
+    background: var(--bg); color: var(--text);
+  }
+  .addcat-color-row {
+    display: flex; align-items: center; gap: 7px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .addcat-color-label { font-size: 12px; color: var(--text-light); flex-shrink: 0; }
+  .addcat-color-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    cursor: pointer; border: 2.5px solid transparent;
+    transition: transform 0.15s, border-color 0.15s; flex-shrink: 0;
+  }
+  .addcat-color-dot:hover { transform: scale(1.2); }
+  .addcat-color-dot.selected { border-color: var(--text); transform: scale(1.15); }
+  .addcat-emoji-input { width: 52px; text-align: center; font-size: 20px; }
+  .addcat-name-input { flex: 1; }
+  .addcat-emoji-input:focus, .addcat-name-input:focus { border-color: var(--accent); }
+  .addcat-btns { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* デフォルトカラーダイアログ */
+  .default-color-box {
+    background: var(--surface); border-radius: 20px;
+    padding: 24px 26px; max-width: 320px; width: 90%;
+    box-shadow: 0 12px 40px rgba(74,50,40,0.18);
+    animation: modalIn 0.2s ease;
+  }
+  .default-color-box h3 { font-size: 15px; margin-bottom: 6px; }
+  .default-color-box p { font-size: 12px; color: var(--text-light); margin-bottom: 16px; }
+  .default-color-swatches {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .default-color-swatch-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; border: 3px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .default-color-swatch-btn:hover { transform: scale(1.2); }
+  .default-color-swatch-btn.selected { border-color: #4a3f3a; transform: scale(1.15); }
+
+  /* ====== TOAST ====== */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: #fff;
+    padding: 10px 22px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    opacity: 0; transition: all 0.3s ease;
+    z-index: 999; pointer-events: none; white-space: nowrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ====== MOBILE BREAKPOINT ====== */
+  @media (max-width: 640px) {
+    #sidebar {
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      transform: translateX(-100%);
+      box-shadow: 4px 0 20px rgba(74,50,40,0.15);
+    }
+    #sidebar.open { transform: translateX(0); }
+
+    #menu-btn { display: flex; }
+    .topbar-title { max-width: 100px; font-size: 15px; }
+    .new-note-btn .btn-label { display: none; }
+    .new-note-btn { padding: 9px 14px; font-size: 18px; border-radius: 50%; width: 40px; height: 40px; justify-content: center; }
+
+    #fab { display: flex; }
+
+    .notes-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    #content { padding: 16px 14px 100px; }
+
+    #modal { border-radius: 22px 22px 0 0; max-height: 95vh; }
+    #modal-footer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  }
+
+  @media (min-width: 641px) {
+    #modal-overlay { align-items: center; }
+    #modal { border-radius: 24px; max-height: 88vh; width: min(680px, 94vw); }
+    #modal-handle { display: none; }
+    @keyframes sheetIn {
+      from { transform: scale(0.95) translateY(16px); opacity: 0; }
+      to   { transform: scale(1) translateY(0); opacity: 1; }
+    }
+  }
+
+  /* ====== 音声メモ ====== */
+  .toolbar-btn.recording {
+    background: #e53935 !important;
+    color: #fff !important;
+    border-color: #e53935 !important;
+    animation: recPulse 1s ease-in-out infinite;
+  }
+  @keyframes recPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(229,57,53,0.4); }
+    50%      { box-shadow: 0 0 0 6px rgba(229,57,53,0); }
+  }
+  .audio-memo-wrap {
+    background: linear-gradient(135deg,rgba(255,240,240,0.9),rgba(255,250,250,0.9));
+    border: 1.5px solid #f0ccc0;
+    border-radius: 14px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    position: relative;
+  }
+  .audio-memo-wrap audio { flex: 1; height: 34px; min-width: 0; }
+  .audio-memo-wrap .remove-audio {
+    width: 26px; height: 26px; border: none;
+    background: rgba(220,80,60,0.12); color: #c9605a;
+    border-radius: 50%; cursor: pointer; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.15s;
+  }
+  .audio-memo-wrap .remove-audio:hover { background: rgba(220,80,60,0.25); }
+  .audio-memo-label { font-size: 11px; color: var(--text-light); white-space: nowrap; }
+  #audio-memos-area { display: flex; flex-direction: column; gap: 8px; }
+
+  /* ====== 手書きモーダル ====== */
+  #draw-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(74,63,58,0.45);
+    backdrop-filter: blur(5px);
+    z-index: 200; align-items: center; justify-content: center;
+    animation: fadeIn 0.18s ease;
+  }
+  #draw-modal-overlay.open { display: flex; }
+
+  #draw-modal {
+    background: var(--surface);
+    border-radius: 22px;
+    width: min(560px, 96vw);
+    max-height: 92vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 12px 48px rgba(74,50,40,0.22);
+    animation: modalIn 0.22s ease;
+    overflow: hidden;
+  }
+
+  #draw-header {
+    padding: 14px 18px 10px;
+    border-bottom: 1.5px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+  #draw-header h3 { font-size: 15px; font-weight: 700; flex: 1; }
+
+  #draw-toolbar {
+    padding: 8px 14px;
+    display: flex; align-items: center; gap: 7px;
+    flex-wrap: wrap; flex-shrink: 0;
+    border-bottom: 1.5px solid var(--border);
+  }
+
+  .draw-color-btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    cursor: pointer; border: 3px solid transparent;
+    transition: transform 0.15s, border-color 0.15s; flex-shrink: 0;
+  }
+  .draw-color-btn:hover { transform: scale(1.2); }
+  .draw-color-btn.selected { border-color: var(--text); transform: scale(1.15); }
+
+  .draw-size-wrap {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-light);
+  }
+  .draw-size-wrap input[type=range] {
+    width: 72px; accent-color: var(--accent);
+  }
+
+  .draw-tool-btn {
+    padding: 5px 10px; border-radius: 9px;
+    border: 1.5px solid var(--border);
+    background: transparent; cursor: pointer;
+    font-family: inherit; font-size: 12px; color: var(--text);
+    transition: all 0.15s;
+  }
+  .draw-tool-btn:hover { background: var(--border); }
+  .draw-tool-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  #draw-canvas-wrap {
+    flex: 1; overflow: hidden; position: relative;
+    background: #fff;
+    cursor: crosshair;
+    touch-action: none;
+    min-height: 300px;
+    height: 340px;
+  }
+  #draw-canvas {
+    display: block; width: 100%; height: 100%;
+  }
+
+  #draw-footer {
+    padding: 10px 18px;
+    border-top: 1.5px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    justify-content: flex-end; flex-shrink: 0;
+  }
+
+  .note-has-audio { font-size: 11px; color: var(--text-light); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR OVERLAY -->
+<div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="logo"><span>🌸</span> ふわメモ</div>
+  <div class="sidebar-section">FOLDERS</div>
+  <div id="cat-list"></div>
+  <div class="add-cat-btn" onclick="openAddCat()">
+    <span>＋</span> フォルダを追加
+  </div>
+  <!-- デフォルトカラー設定ボタン -->
+  <button class="default-color-btn" onclick="openDefaultColorDialog()" id="default-color-btn">
+    <span class="default-color-swatch" id="default-color-swatch"></span>
+    デフォルト色を設定
+  </button>
+  <div class="sidebar-divider"></div>
+  <!-- フォルダのゴミ箱 -->
+  <div class="folder-trash-section" id="folder-trash-section" style="display:none">
+    <div class="folder-trash-toggle" onclick="toggleFolderTrash()" id="folder-trash-toggle">
+      <span>🗂️</span>
+      <span style="flex:1">削除したフォルダ</span>
+      <span id="folder-trash-arrow">▶</span>
+      <span id="folder-trash-badge" style="background:#c9705a;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;"></span>
+    </div>
+    <div class="folder-trash-list" id="folder-trash-list"></div>
+  </div>
+  <div class="sidebar-divider"></div>
+  <div class="trash-item" id="trash-tab" onclick="switchView('trash');closeSidebar()">
+    🗑️ ゴミ箱 <span id="trash-count" style="margin-left:auto;font-size:11px;color:#c9705a;"></span>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <button id="menu-btn" onclick="openSidebar()">☰</button>
+    <div class="topbar-title" id="topbar-title">すべてのメモ</div>
+    <div class="topbar-right">
+      <div class="search-wrap">
+        <span style="color:var(--text-light);font-size:13px;flex-shrink:0">🔍</span>
+        <input type="text" id="search-input" placeholder="検索…" oninput="renderNotes()">
+      </div>
+      <button class="new-note-btn" onclick="openNewNote()">
+        <span>✦</span><span class="btn-label"> 新しいメモ</span>
+      </button>
+    </div>
+  </div>
+  <!-- 一括選択モードバー -->
+  <div id="multiselect-bar">
+    <span class="multiselect-count" id="multiselect-count">0件選択中</span>
+    <button class="multiselect-trash-btn" onclick="bulkTrash()">🗑️ ゴミ箱へ移動</button>
+    <button class="multiselect-cancel-btn" onclick="exitMultiselectMode()">キャンセル</button>
+  </div>
+  <div id="content"></div>
+</div>
+
+<!-- FAB (mobile) -->
+<button id="fab" onclick="openNewNote()">✦</button>
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div id="modal">
+    <div id="modal-handle"></div>
+    <div id="modal-header">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-toolbar">
+      <button class="toolbar-btn" title="太字" onclick="execCmd('bold')"><b>B</b></button>
+      <button class="toolbar-btn" title="イタリック" onclick="execCmd('italic')"><i>I</i></button>
+      <button class="toolbar-btn" title="下線" onclick="execCmd('underline')"><u>U</u></button>
+
+      <div style="position:relative;flex-shrink:0" id="text-color-wrap">
+        <button class="toolbar-btn" title="文字色" id="text-color-btn" onclick="toggleTextColorPicker(event)">
+          <span style="font-weight:700;font-size:13px">A</span>
+          <span class="color-indicator" id="text-color-indicator"></span>
+        </button>
+        <div class="text-color-popup" id="text-color-popup"></div>
+      </div>
+
+      <div class="toolbar-sep"></div>
+
+      <div style="position:relative;flex-shrink:0" id="marker-wrap">
+        <button class="toolbar-btn" title="蛍光マーカー" id="marker-btn" onclick="toggleMarkerPicker(event)">🖊</button>
+        <div class="marker-popup" id="marker-popup"></div>
+      </div>
+
+      <div class="toolbar-sep"></div>
+      <button class="toolbar-btn" title="チェックリスト追加" onclick="addCheckItem()">☑</button>
+      <div class="toolbar-sep"></div>
+      <button class="toolbar-btn" title="画像を追加" onclick="document.getElementById('img-input').click()">🖼</button>
+      <input type="file" id="img-input" accept="image/*" style="display:none" onchange="handleImageAdd(event)">
+      <button class="toolbar-btn" id="audio-rec-btn" title="音声メモを録音" onclick="toggleAudioRecord()">🎙️</button>
+      <button class="toolbar-btn" title="手書きメモを追加" onclick="openDrawModal()">🎨</button>
+      <button class="toolbar-btn" id="stamp-toggle-btn" title="スタンプ" onclick="toggleStampSection()">😊</button>
+      <button class="toolbar-btn" title="全文コピー" onclick="copyAllText()" style="font-size:13px">📋</button>
+      <div class="toolbar-sep"></div>
+      <div class="color-palette" id="color-palette"></div>
+    </div>
+    <div id="modal-body">
+      <!-- STAMP SECTION -->
+      <div class="stamp-section">
+        <div class="stamp-section-title">✦ スタンプを貼る</div>
+        <div class="stamp-section-hint">👆 タップするとメモにポンと貼りつきます</div>
+        <div class="stamp-tabs" id="stamp-tabs"></div>
+        <div class="stamp-grid" id="stamp-grid"></div>
+      </div>
+      <!-- 1行目がタイトルになるエディタ -->
+      <div id="note-editor" contenteditable="true" data-placeholder="1行目がタイトルになります…"></div>
+      <div class="note-images-area" id="note-images-area"></div>
+      <div id="audio-memos-area"></div>
+    </div>
+    <div id="modal-footer">
+      <select class="category-select" id="modal-cat-select"></select>
+      <button class="pin-toggle" id="pin-toggle" onclick="togglePin()">📍 ピン留め</button>
+      <button class="save-btn" onclick="saveNote()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRASH CONFIRM -->
+<div id="trash-confirm">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <h3>完全削除しますか？</h3>
+    <p>この操作は元に戻せません。</p>
+    <div class="confirm-btns">
+      <button class="confirm-btn cancel" onclick="closeConfirm()">キャンセル</button>
+      <button class="confirm-btn delete" onclick="permanentDelete()">完全削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT CATEGORY -->
+<div id="addcat-dialog">
+  <div class="addcat-box">
+    <h3 id="addcat-dialog-title">📁 フォルダを追加</h3>
+    <div class="addcat-row">
+      <input type="text" class="addcat-emoji-input" id="addcat-emoji" placeholder="📁" maxlength="2">
+      <input type="text" class="addcat-name-input" id="addcat-name" placeholder="フォルダ名" maxlength="20">
+    </div>
+    <div class="addcat-color-row">
+      <span class="addcat-color-label">テーマカラー：</span>
+      <div id="addcat-color-palette"></div>
+    </div>
+    <div class="addcat-btns">
+      <button class="confirm-btn cancel" onclick="closeAddCat()">キャンセル</button>
+      <button class="confirm-btn" id="addcat-save-btn" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;" onclick="saveCategory()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEFAULT COLOR DIALOG -->
+<div id="default-color-dialog">
+  <div class="default-color-box">
+    <h3>🎨 デフォルトメモカラー</h3>
+    <p>新規メモ作成時の初期色を設定します</p>
+    <div class="default-color-swatches" id="default-color-swatches"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="confirm-btn cancel" onclick="closeDefaultColorDialog()">キャンセル</button>
+      <button class="confirm-btn" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;" onclick="saveDefaultColor()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- DRAW MODAL -->
+<div id="draw-modal-overlay">
+  <div id="draw-modal">
+    <div id="draw-header">
+      <h3>🎨 手書きメモ</h3>
+      <button class="modal-close" onclick="closeDrawModal()">✕</button>
+    </div>
+    <div id="draw-toolbar">
+      <div id="draw-colors"></div>
+      <div class="toolbar-sep" style="margin:0 3px"></div>
+      <div class="draw-size-wrap">
+        <span>🖊</span>
+        <input type="range" id="draw-size" min="1" max="30" value="4" oninput="updateDrawSize(this.value)">
+        <span id="draw-size-label">4px</span>
+      </div>
+      <div class="toolbar-sep" style="margin:0 3px"></div>
+      <button class="draw-tool-btn" id="draw-eraser-btn" onclick="toggleEraser()">🧹 消しゴム</button>
+      <button class="draw-tool-btn" onclick="clearCanvas()">🗑 全消去</button>
+    </div>
+    <div id="draw-canvas-wrap">
+      <canvas id="draw-canvas"></canvas>
+    </div>
+    <div id="draw-footer">
+      <button class="confirm-btn cancel" onclick="closeDrawModal()">キャンセル</button>
+      <button class="confirm-btn" style="background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;" onclick="insertDrawing()">✦ メモに挿入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ====== CONSTANTS ======
+const NOTE_COLORS = [
+  { key:'yellow',   hex:'#fef9d7' },
+  { key:'pink',     hex:'#fde8e8' },
+  { key:'blue',     hex:'#deedf8' },
+  { key:'green',    hex:'#e2f3e4' },
+  { key:'lavender', hex:'#ede8f8' },
+  { key:'peach',    hex:'#feeee0' },
+  { key:'mint',     hex:'#dff3ef' },
+  { key:'white',    hex:'#fdfdfb' },
+];
+
+const MARKER_COLORS = [
+  { label:'イエロー',  bg:'#fff176', border:'#f9e000' },
+  { label:'ピンク',    bg:'#ffb3c6', border:'#ff6b9d' },
+  { label:'グリーン',  bg:'#b9f6b0', border:'#4caf50' },
+  { label:'スカイ',    bg:'#b3e5fc', border:'#03a9f4' },
+  { label:'オレンジ',  bg:'#ffcc80', border:'#ff9800' },
+  { label:'ラベンダー',bg:'#e1bee7', border:'#9c27b0' },
+];
+
+const TEXT_COLORS = [
+  '#e53935','#e91e63','#8e24aa','#3949ab','#1e88e5',
+  '#00897b','#43a047','#f4511e','#fb8c00','#b27300',
+  '#4a3f3a','#8a7a74','#ffffff',
+];
+
+const STAMP_CATEGORIES = {
+  '動物':   ['🐱','🐶','🐰','🐻','🦊','🐼','🐸','🐮','🐷','🐻‍❄️','🐨','🦁','🐯','🐺','🦋','🐣','🐥','🦜','🐠','🦄'],
+  'スイーツ':['🍰','🎂','🧁','🍩','🍪','🍫','🍬','🍭','🍮','🧇','🍓','🍑','🍒','🍇','🍦','🧃','🍡','🎁','🫖','🍵'],
+  'お花':   ['🌸','🌺','🌻','🌹','🌷','💐','🌼','🌿','🍀','🌱','🍃','🌾','🌵','🪷','🎋','🪴','🌴','🌳','🍁','🍄'],
+  '星・空': ['⭐','🌟','✨','💫','🌙','☀️','🌈','⚡','☁️','🌤','🌦','❄️','🌊','🔥','💧','🌍','🪐','🌠','🌌','🎇'],
+  '気持ち': ['❤️','🧡','💛','💚','💙','💜','🤍','🖤','❤️‍🔥','💕','💞','💓','💗','💖','💝','🫶','🥰','😊','😍','🥳'],
+  'アイテム':['🎀','🎵','🎶','📚','✏️','🖊️','📝','🎨','🎭','🏆','🎯','💎','👑','🪄','🔮','🎪','🎠','🧩','🎈','🎉'],
+};
+
+// 削除不可の固定フォルダID
+const BUILTIN_CAT_IDS = ['all','work','private','idea'];
+
+// ====== STATE ======
+let state = {
+  notes: [],
+  categories: [
+    { id:'all',     icon:'📋', name:'すべて',       color:'yellow'   },
+    { id:'work',    icon:'💼', name:'仕事',          color:'blue'     },
+    { id:'private', icon:'🏠', name:'プライベート',  color:'green'    },
+    { id:'idea',    icon:'💡', name:'アイデア',      color:'lavender' },
+  ],
+  activeView: 'all',
+  editingId: null,
+  tempColor: 'yellow',
+  defaultNoteColor: 'yellow',   // ★新機能2: デフォルトカラー
+  defaultColorTemp: 'yellow',   // ダイアログ内の一時選択
+  tempImages: [],
+  tempPinned: false,
+  pendingDeleteId: null,
+  activeStampCat: '動物',
+  savedRange: null,
+  cardOrder: {},
+  cardSizes: {},
+  currentTextColor: '#e53935',
+  currentMarkerColor: MARKER_COLORS[0],
+  tempAudios: [],
+  mediaRecorder: null,
+  isRecording: false,
+  audioChunks: [],
+  addCatTempColor: 'yellow',
+  // ★新機能3: 一括選択
+  multiselectMode: false,
+  selectedNoteIds: new Set(),
+  // 削除フォルダ確認
+  pendingDeleteCatId: null,
+  // フォルダゴミ箱
+  deletedCategories: [],
+  folderTrashOpen: false,
+};
+
+// ====== STORAGE ======
+function save() {
+  try {
+    localStorage.setItem('fuwamemo_v4', JSON.stringify({
+      notes: state.notes,
+      categories: state.categories,
+      cardOrder: state.cardOrder,
+      cardSizes: state.cardSizes,
+      defaultNoteColor: state.defaultNoteColor,
+      deletedCategories: state.deletedCategories,
+    }));
+  } catch(e) {}
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem('fuwamemo_v4')
+             || localStorage.getItem('fuwamemo_v3')
+             || localStorage.getItem('fuwamemo_v2') || '{}';
+    const d = JSON.parse(raw);
+    if (d.notes)            state.notes            = d.notes;
+    if (d.categories)       state.categories       = d.categories;
+    if (d.cardOrder)        state.cardOrder        = d.cardOrder;
+    if (d.cardSizes)        state.cardSizes        = d.cardSizes;
+    if (d.defaultNoteColor) state.defaultNoteColor = d.defaultNoteColor;
+    if (d.deletedCategories) state.deletedCategories = d.deletedCategories;
+  } catch(e) {}
+}
+
+// ====== INIT ======
+function init() {
+  // フォルダ選択モード初期化
+  state.folderSelectMode = false;
+  state.selectedFolderIds = new Set();
+  state.folderTrashOpen = false;
+  load();
+  renderSidebar();
+  renderNotes();
+  buildColorPalette();
+  buildStamps();
+  buildMarkerPicker();
+  buildTextColorPicker();
+  updateTrashCount();
+  updateDefaultColorSwatch();
+  setupHistoryBack();
+
+  const editor = document.getElementById('note-editor');
+  let autoTimer;
+
+  let isComposing = false;
+  editor.addEventListener('compositionstart', () => { isComposing = true; });
+  editor.addEventListener('compositionend',   () => {
+    isComposing = false;
+    scheduleAutoSave();
+  });
+  editor.addEventListener('input', () => {
+    if (!isComposing) scheduleAutoSave();
+  });
+
+  function scheduleAutoSave() {
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(() => {
+      // 新規作成中（editingId が null）でも仮IDを発行して保存
+      if (!state.editingId) {
+        const { title, body } = extractTitleBody();
+        if (!title && !body && !state.tempImages.length && !state.tempAudios.length) return;
+        const tempId = 'n_' + Date.now();
+        const category = document.getElementById('modal-cat-select').value;
+        applyColorFromCategory(category);
+        state.editingId = tempId;
+        state.notes.unshift({
+          id: tempId, title, body,
+          color: state.tempColor,
+          images: [...state.tempImages],
+          audios: [...state.tempAudios],
+          category, pinned: state.tempPinned,
+          deleted: false, createdAt: Date.now(), updatedAt: Date.now(),
+        });
+        save();
+        renderSidebar();
+        renderNotes();
+      } else {
+        const n = state.notes.find(n => n.id === state.editingId);
+        if (n) {
+          const { title, body } = extractTitleBody();
+          n.title = title;
+          n.body  = body;
+          n.images = [...state.tempImages];
+          n.audios = [...state.tempAudios];
+          n.updatedAt = Date.now();
+          save();
+        }
+      }
+    }, 800);
+  }
+
+  editor.addEventListener('blur',     saveRange);
+  editor.addEventListener('keyup',    saveRange);
+  editor.addEventListener('mouseup',  saveRange);
+  editor.addEventListener('touchend', saveRange);
+
+  document.addEventListener('mousedown', closeAllPopups);
+  document.addEventListener('touchstart', closeAllPopups, { passive: true });
+}
+
+// ====== ② history.pushState による戻るボタン対応 ======
+function setupHistoryBack() {
+  history.replaceState({ layer: 0 }, '');
+
+  window.addEventListener('popstate', (e) => {
+    const layer = e.state?.layer || 0;
+    if (document.getElementById('draw-modal-overlay').classList.contains('open')) {
+      closeDrawModal();
+      history.pushState({ layer: layer + 1 }, '');
+      return;
+    }
+    if (document.getElementById('trash-confirm').classList.contains('open')) {
+      closeConfirm();
+      history.pushState({ layer: layer + 1 }, '');
+      return;
+    }
+    if (document.getElementById('addcat-dialog').classList.contains('open')) {
+      closeAddCat();
+      history.pushState({ layer: layer + 1 }, '');
+      return;
+    }
+    if (document.getElementById('default-color-dialog').classList.contains('open')) {
+      closeDefaultColorDialog();
+      history.pushState({ layer: layer + 1 }, '');
+      return;
+    }
+    if (document.getElementById('modal-overlay').classList.contains('open')) {
+      saveNoteIfNeeded();
+      history.pushState({ layer: layer + 1 }, '');
+      return;
+    }
+    if (state.multiselectMode) {
+      exitMultiselectMode();
+      history.pushState({ layer: layer + 1 }, '');
+      return;
+    }
+    if (document.getElementById('sidebar').classList.contains('open')) {
+      closeSidebar();
+      history.pushState({ layer: layer + 1 }, '');
+      return;
+    }
+  });
+}
+
+function pushHistoryLayer() {
+  history.pushState({ layer: 1 }, '');
+}
+
+// ====== SIDEBAR TOGGLE ======
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+  pushHistoryLayer();
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  if (typeof exitFolderSelectMode === 'function') exitFolderSelectMode();
+}
+
+// ====== SIDEBAR RENDER ======
+function renderSidebar() {
+  const list = document.getElementById('cat-list');
+  list.innerHTML = '';
+  state.categories.forEach(cat => {
+    const el = document.createElement('div');
+    el.className = 'category-item' + (state.activeView === cat.id ? ' active' : '');
+    if (state.selectedFolderIds && state.selectedFolderIds.has(cat.id)) {
+      el.classList.add('folder-selected');
+    }
+    const count = state.notes.filter(n => !n.deleted && (cat.id === 'all' || n.category === cat.id)).length;
+    const isBuiltin = cat.id === 'all';
+
+    el.innerHTML = `
+      <span class="cat-icon">${cat.icon}</span>
+      <span class="cat-name">${escHTML(cat.name)}</span>
+      <span class="cat-count">${count}</span>
+      <div class="cat-actions">
+        <button class="cat-edit-btn" title="フォルダを編集" onclick="event.stopPropagation();openEditCat('${cat.id}')">✏️</button>
+        ${!isBuiltin ? `<button class="cat-delete-btn" title="フォルダをゴミ箱へ" onclick="event.stopPropagation();softDeleteCat('${cat.id}')">🗑</button>` : ''}
+      </div>
+    `;
+
+    // クリックで切り替え（長押し選択中でなければ）
+    el.addEventListener('click', () => {
+      if (state.folderSelectMode) {
+        toggleFolderSelect(cat.id, el);
+        return;
+      }
+      switchView(cat.id);
+      closeSidebar();
+    });
+
+    // 長押しでフォルダ選択モード
+    setupFolderLongPress(el, cat.id);
+
+    list.appendChild(el);
+  });
+  document.getElementById('trash-tab').className = 'trash-item' + (state.activeView === 'trash' ? ' active' : '');
+  updateTrashCount();
+  updateModalCatSelect();
+  renderFolderTrash();
+}
+
+function updateTrashCount() {
+  const c = state.notes.filter(n => n.deleted).length;
+  document.getElementById('trash-count').textContent = c > 0 ? c : '';
+}
+
+function switchView(id) {
+  // 一括選択モード中なら解除
+  if (state.multiselectMode) exitMultiselectMode();
+  state.activeView = id;
+  document.getElementById('topbar-title').textContent =
+    id === 'trash' ? '🗑️ ゴミ箱' :
+    (state.categories.find(c => c.id === id)?.name || 'メモ');
+  renderSidebar();
+  renderNotes();
+}
+
+// ====== フォルダ 長押し選択モード ======
+function setupFolderLongPress(el, catId) {
+  let timer = null;
+  const LONG = 520;
+
+  function start(e) {
+    if (e.target.closest('.cat-actions')) return;
+    timer = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(40);
+      enterFolderSelectMode(catId, el);
+    }, LONG);
+  }
+  function cancel() { clearTimeout(timer); }
+
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mouseup', cancel);
+  el.addEventListener('mouseleave', cancel);
+  el.addEventListener('touchstart', start, { passive: true });
+  el.addEventListener('touchend', cancel);
+  el.addEventListener('touchcancel', cancel);
+  el.addEventListener('touchmove', (e) => {
+    const dx = Math.abs((e.touches[0]?.clientX||0) - (el._tx||0));
+    const dy = Math.abs((e.touches[0]?.clientY||0) - (el._ty||0));
+    if (dx > 8 || dy > 8) cancel();
+  });
+  el.addEventListener('touchstart', (e) => {
+    el._tx = e.touches[0]?.clientX;
+    el._ty = e.touches[0]?.clientY;
+  }, { passive: true });
+}
+
+function enterFolderSelectMode(catId, el) {
+  state.folderSelectMode = true;
+  state.selectedFolderIds = new Set([catId]);
+  el.classList.add('folder-selected');
+  showToast('長押しでフォルダを選択しました。操作ボタンを使ってください ✏️🗑');
+}
+
+function exitFolderSelectMode() {
+  state.folderSelectMode = false;
+  state.selectedFolderIds = new Set();
+  document.querySelectorAll('.category-item.folder-selected').forEach(el => el.classList.remove('folder-selected'));
+}
+
+function toggleFolderSelect(catId, el) {
+  if (state.selectedFolderIds.has(catId)) {
+    state.selectedFolderIds.delete(catId);
+    el.classList.remove('folder-selected');
+    if (state.selectedFolderIds.size === 0) exitFolderSelectMode();
+  } else {
+    state.selectedFolderIds.add(catId);
+    el.classList.add('folder-selected');
+  }
+}
+
+// ====== フォルダ ソフト削除（ゴミ箱へ）======
+function softDeleteCat(catId) {
+  const cat = state.categories.find(c => c.id === catId);
+  if (!cat) return;
+  if (catId === 'all') {
+    showToast('「すべて」フォルダは削除できません');
+    return;
+  }
+  const affectedCount = state.notes.filter(n => !n.deleted && n.category === catId).length;
+  const msg = affectedCount > 0
+    ? `「${cat.name}」をゴミ箱へ移動しますか？\n（${affectedCount}件のメモは「すべて」に移動します）`
+    : `「${cat.name}」をゴミ箱へ移動しますか？`;
+  if (!confirm(msg)) return;
+
+  // メモのカテゴリをリセット
+  const fallbackCat = state.categories.find(c => c.id !== 'all' && c.id !== catId)?.id || '';
+  state.notes.forEach(n => { if (n.category === catId) n.category = fallbackCat; });
+
+  // フォルダをゴミ箱へ
+  state.deletedCategories.push({ ...cat, deletedAt: Date.now() });
+  state.categories = state.categories.filter(c => c.id !== catId);
+
+  if (state.activeView === catId) {
+    state.activeView = 'all';
+    document.getElementById('topbar-title').textContent = 'すべてのメモ';
+  }
+  exitFolderSelectMode();
+  save();
+  renderSidebar();
+  renderNotes();
+  showToast(`「${cat.name}」をゴミ箱へ移動しました ♻️`);
+}
+
+// ====== フォルダゴミ箱 表示 ======
+function renderFolderTrash() {
+  const section = document.getElementById('folder-trash-section');
+  const list = document.getElementById('folder-trash-list');
+  const badge = document.getElementById('folder-trash-badge');
+  const arrow = document.getElementById('folder-trash-arrow');
+  if (!state.deletedCategories || state.deletedCategories.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  badge.textContent = state.deletedCategories.length;
+  arrow.textContent = state.folderTrashOpen ? '▼' : '▶';
+
+  list.innerHTML = '';
+  list.className = 'folder-trash-list' + (state.folderTrashOpen ? ' open' : '');
+  state.deletedCategories.forEach(cat => {
+    const item = document.createElement('div');
+    item.className = 'deleted-cat-item';
+    item.innerHTML = `
+      <span style="font-size:15px;flex-shrink:0">${cat.icon}</span>
+      <span class="deleted-cat-name">${escHTML(cat.name)}</span>
+      <button class="deleted-cat-restore" onclick="restoreDeletedCat('${cat.id}')">復元</button>
+      <button class="deleted-cat-purge" onclick="purgeCat('${cat.id}')">✕</button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function toggleFolderTrash() {
+  state.folderTrashOpen = !state.folderTrashOpen;
+  renderFolderTrash();
+}
+
+function restoreDeletedCat(catId) {
+  const cat = state.deletedCategories.find(c => c.id === catId);
+  if (!cat) return;
+  state.deletedCategories = state.deletedCategories.filter(c => c.id !== catId);
+  // 同じIDが既にあれば新IDを付与
+  const newId = state.categories.find(c => c.id === cat.id) ? 'cat_' + Date.now() : cat.id;
+  const restored = { ...cat, id: newId };
+  delete restored.deletedAt;
+  state.categories.push(restored);
+  save();
+  renderSidebar();
+  showToast(`「${cat.name}」を復元しました ✓`);
+}
+
+function purgeCat(catId) {
+  const cat = state.deletedCategories.find(c => c.id === catId);
+  if (!cat) return;
+  if (!confirm(`「${cat.name}」を完全に削除しますか？`)) return;
+  state.deletedCategories = state.deletedCategories.filter(c => c.id !== catId);
+  save();
+  renderFolderTrash();
+  showToast('フォルダを完全に削除しました');
+}
+
+// ====== フォルダ削除（旧: confirm版 - 後方互換） ======
+function confirmDeleteCat(catId) {
+  softDeleteCat(catId);
+}
+
+function deleteCat(catId) {
+  softDeleteCat(catId);
+}
+
+// ====== CATEGORY: 追加 / 編集 / 削除 ======
+
+// 編集中のフォルダID（null = 新規追加モード）
+let editingCatId = null;
+
+function openAddCat() {
+  editingCatId = null;
+  document.getElementById('addcat-dialog-title').textContent = '📁 フォルダを追加';
+  document.getElementById('addcat-save-btn').textContent = '追加';
+  document.getElementById('addcat-emoji').value = '';
+  document.getElementById('addcat-name').value = '';
+  state.addCatTempColor = 'yellow';
+  buildAddCatColorPalette();
+  document.getElementById('addcat-dialog').classList.add('open');
+  setTimeout(() => document.getElementById('addcat-name').focus(), 80);
+  pushHistoryLayer();
+}
+
+function openEditCat(catId) {
+  const cat = state.categories.find(c => c.id === catId);
+  if (!cat) return;
+  editingCatId = catId;
+  document.getElementById('addcat-dialog-title').textContent = '✏️ フォルダを編集';
+  document.getElementById('addcat-save-btn').textContent = '保存';
+  document.getElementById('addcat-emoji').value = cat.icon || '';
+  document.getElementById('addcat-name').value = cat.name || '';
+  state.addCatTempColor = cat.color || 'yellow';
+  buildAddCatColorPalette();
+  document.getElementById('addcat-dialog').classList.add('open');
+  setTimeout(() => document.getElementById('addcat-name').focus(), 80);
+  pushHistoryLayer();
+}
+
+function closeAddCat() {
+  document.getElementById('addcat-dialog').classList.remove('open');
+  editingCatId = null;
+}
+
+function saveCategory() {
+  const icon = document.getElementById('addcat-emoji').value.trim() || '📁';
+  const name = document.getElementById('addcat-name').value.trim();
+  if (!name) {
+    document.getElementById('addcat-name').focus();
+    return;
+  }
+  const color = state.addCatTempColor || 'yellow';
+
+  if (editingCatId) {
+    // 編集モード
+    const cat = state.categories.find(c => c.id === editingCatId);
+    if (cat) {
+      cat.icon  = icon;
+      cat.name  = name;
+      cat.color = color;
+    }
+    save();
+    closeAddCat();
+    renderSidebar();
+    renderNotes();
+    // アクティブビューのタイトルも更新
+    if (state.activeView === editingCatId) {
+      document.getElementById('topbar-title').textContent = name;
+    }
+    showToast('フォルダを更新しました ✓');
+  } else {
+    // 新規追加モード
+    state.categories.push({ id: 'cat_' + Date.now(), icon, name, color });
+    save();
+    closeAddCat();
+    renderSidebar();
+    showToast('フォルダを追加しました ✓');
+  }
+}
+
+// 旧 addCategory は saveCategory に統合（後方互換のためエイリアス）
+function addCategory() { saveCategory(); }
+
+function buildAddCatColorPalette() {
+  const wrap = document.getElementById('addcat-color-palette');
+  wrap.innerHTML = '';
+  wrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;align-items:center;';
+  NOTE_COLORS.forEach(c => {
+    const dot = document.createElement('div');
+    dot.className = 'addcat-color-dot' + (c.key === state.addCatTempColor ? ' selected' : '');
+    dot.style.background = c.hex;
+    dot.title = c.key;
+    dot.onclick = () => {
+      state.addCatTempColor = c.key;
+      document.querySelectorAll('.addcat-color-dot').forEach(d => d.classList.toggle('selected', d.title === c.key));
+    };
+    wrap.appendChild(dot);
+  });
+}
+
+function applyColorFromCategory(catId) {
+  const cat = state.categories.find(c => c.id === catId);
+  if (cat) {
+    state.tempColor = cat.color || 'yellow';
+    updateColorPaletteUI();
+  }
+}
+
+// ====== ★新機能2: デフォルトカラー設定 ======
+function openDefaultColorDialog() {
+  state.defaultColorTemp = state.defaultNoteColor;
+  buildDefaultColorSwatches();
+  document.getElementById('default-color-dialog').classList.add('open');
+  pushHistoryLayer();
+}
+function closeDefaultColorDialog() {
+  document.getElementById('default-color-dialog').classList.remove('open');
+}
+function buildDefaultColorSwatches() {
+  const wrap = document.getElementById('default-color-swatches');
+  wrap.innerHTML = '';
+  NOTE_COLORS.forEach(c => {
+    const btn = document.createElement('div');
+    btn.className = 'default-color-swatch-btn' + (c.key === state.defaultColorTemp ? ' selected' : '');
+    btn.style.background = c.hex;
+    btn.title = c.key;
+    btn.onclick = () => {
+      state.defaultColorTemp = c.key;
+      document.querySelectorAll('.default-color-swatch-btn').forEach(b => b.classList.toggle('selected', b.title === c.key));
+    };
+    wrap.appendChild(btn);
+  });
+}
+function saveDefaultColor() {
+  state.defaultNoteColor = state.defaultColorTemp;
+  save();
+  updateDefaultColorSwatch();
+  closeDefaultColorDialog();
+  showToast('デフォルトカラーを保存しました ✓');
+}
+function updateDefaultColorSwatch() {
+  const hex = NOTE_COLORS.find(c => c.key === state.defaultNoteColor)?.hex || '#fef9d7';
+  const swatch = document.getElementById('default-color-swatch');
+  if (swatch) swatch.style.background = hex;
+}
+
+// ====== RENDER NOTES ======
+function renderNotes() {
+  const content = document.getElementById('content');
+  const query = document.getElementById('search-input').value.trim().toLowerCase();
+  let notes = state.notes.filter(n => {
+    if (state.activeView === 'trash') return n.deleted;
+    if (n.deleted) return false;
+    if (state.activeView !== 'all' && n.category !== state.activeView) return false;
+    if (query) return (n.title||'').toLowerCase().includes(query)||(n.body||'').toLowerCase().includes(query);
+    return true;
+  });
+
+  if (notes.length === 0) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">${state.activeView==='trash'?'🗑️':'🌸'}</div><p>${state.activeView==='trash'?'ゴミ箱は空です':'メモがありません\n「新しいメモ」ボタンで作成しましょう'}</p></div>`;
+    return;
+  }
+
+  const viewKey = state.activeView;
+  const savedOrder = state.cardOrder[viewKey] || [];
+  if (savedOrder.length) {
+    const orderMap = {};
+    savedOrder.forEach((id, i) => { orderMap[id] = i; });
+    notes.sort((a, b) => {
+      const ai = orderMap[a.id] ?? 9999;
+      const bi = orderMap[b.id] ?? 9999;
+      return ai - bi;
+    });
+  }
+
+  const pinned  = notes.filter(n => n.pinned);
+  const regular = notes.filter(n => !n.pinned);
+  content.innerHTML = '';
+
+  if (pinned.length) {
+    const label = document.createElement('div');
+    label.className = 'pinned-section-label';
+    label.textContent = '📌 ピン留め';
+    content.appendChild(label);
+    const grid = document.createElement('div');
+    grid.className = 'notes-grid';
+    grid.dataset.section = 'pinned';
+    pinned.forEach(n => grid.appendChild(makeNoteCard(n)));
+    content.appendChild(grid);
+  }
+  if (regular.length) {
+    if (pinned.length) {
+      const label = document.createElement('div');
+      label.className = 'pinned-section-label';
+      label.textContent = '📝 メモ';
+      content.appendChild(label);
+    }
+    const grid = document.createElement('div');
+    grid.className = 'notes-grid';
+    grid.dataset.section = 'regular';
+    regular.forEach(n => grid.appendChild(makeNoteCard(n)));
+    content.appendChild(grid);
+  }
+
+  document.querySelectorAll('.notes-grid').forEach(g => setupGridDnD(g));
+}
+
+// ====== カードDOM生成 ======
+function makeNoteCard(n) {
+  const cat = state.categories.find(c => c.id === n.category);
+  const colorKey = n.color || (cat && cat.color) || 'yellow';
+  const color = NOTE_COLORS.find(c => c.key === colorKey)?.hex || '#fef9d7';
+  const dateStr = new Date(n.updatedAt||n.createdAt).toLocaleDateString('ja-JP',{month:'short',day:'numeric'});
+  const catName = state.categories.find(c => c.id === n.category)?.name || '';
+
+  const tmp = document.createElement('div');
+  tmp.innerHTML = n.body || '';
+
+  // 未完了チェックボックスの検出
+  const totalCheckboxes   = tmp.querySelectorAll('input[type="checkbox"]').length;
+  const checkedCheckboxes = tmp.querySelectorAll('input[type="checkbox"]:checked').length;
+  const pendingTasks = totalCheckboxes - checkedCheckboxes;
+
+  // 文字色などインラインスタイルを保持しつつ安全にプレビュー用HTMLを生成
+  // 許可タグ: font, span, b, i, u, s, mark, br, div, p  ※script/img/a等は除去
+  function sanitizePreviewHTML(html) {
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    // check-itemのcheckboxとspan.done以外のinputを除去、checkbox自体も除去してテキストのみ残す
+    d.querySelectorAll('input').forEach(el => el.remove());
+    // 危険タグを除去
+    d.querySelectorAll('script,style,iframe,object,embed,a,img,audio,video,canvas').forEach(el => {
+      el.replaceWith(document.createTextNode(el.textContent || ''));
+    });
+    // data-stamp spanはそのまま残す（絵文字として表示される）
+    return d.innerHTML;
+  }
+
+  const bodyPreviewHTML = sanitizePreviewHTML(n.body || '');
+
+  const stampMatches = (n.body||'').match(/data-stamp="([^"]+)"/g) || [];
+  const stamps = stampMatches.map(m => m.replace(/data-stamp="|"/g,''));
+  const imgMatch = (n.images||[]).length ? n.images[0] : null;
+
+  const card = document.createElement('div');
+  card.className = 'note-card' + (n.pinned&&!n.deleted?' pinned':'');
+  card.style.background = color;
+  card.dataset.id = n.id;
+
+  if (state.selectedNoteIds.has(n.id)) card.classList.add('multiselect-selected');
+
+  const savedSize = state.cardSizes[n.id];
+  if (savedSize) {
+    card.style.width  = savedSize.w + 'px';
+    card.style.height = savedSize.h + 'px';
+  }
+
+  const trashBtns = n.deleted
+    ? `<button class="note-action-btn" title="復元" onclick="event.stopPropagation();restoreNote('${n.id}')">♻️</button>
+       <button class="note-action-btn danger" title="完全削除" onclick="event.stopPropagation();confirmDelete('${n.id}')">🗑️</button>`
+    : `<button class="note-action-btn" title="ピン留め" onclick="event.stopPropagation();quickPin('${n.id}')">${n.pinned?'📌':'📍'}</button>
+       <button class="note-action-btn danger" title="ゴミ箱へ" onclick="event.stopPropagation();trashNote('${n.id}')">🗑️</button>`;
+
+  const imgHTML = imgMatch
+    ? `<img src="${imgMatch}" class="note-card-image bottom" alt="" loading="lazy">`
+    : '';
+
+  const stampsHTML = stamps.length
+    ? `<div class="note-stamps-card">${stamps.map(s=>`<span class="note-stamp-big">${s}</span>`).join('')}</div>`
+    : '';
+
+  const taskBadge = pendingTasks > 0
+    ? `<span class="note-task-badge">📝 残${pendingTasks}件</span>`
+    : '';
+
+  // タイトルもHTMLとして色を保持して表示
+  const titleDisplay = sanitizePreviewHTML(n.title || '無題');
+
+  card.innerHTML = `
+    <div class="select-check">✓</div>
+    <div class="note-card-top">
+      <div class="note-title-display">${titleDisplay}</div>
+      <div class="note-actions">${trashBtns}</div>
+    </div>
+    <div class="note-body-preview">${bodyPreviewHTML}</div>
+    ${stampsHTML}
+    ${imgHTML}
+    <div class="note-footer">
+      <span class="note-date">${dateStr}</span>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+        ${taskBadge}
+        ${catName?`<span class="note-cat-badge">${catName}</span>`:''}
+      </div>
+    </div>
+    <div class="note-resize-handle" title="リサイズ"></div>
+  `;
+
+  // ★新機能3: 一括選択モード中はセレクトトグル、通常時は編集
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.note-action-btn')) return;
+    if (e.target.closest('.note-resize-handle')) return;
+    if (state.multiselectMode) {
+      toggleCardSelect(n.id, card);
+      return;
+    }
+    openEditNote(n.id);
+  });
+
+  setupCardResize(card, n.id);
+  setupCardLongPress(card, n.id);
+
+  return card;
+}
+
+// ====== ★新機能3: 長押し → 一括選択モード ======
+function setupCardLongPress(card, noteId) {
+  let longPressTimer = null;
+  const LONG_PRESS_MS = 500;
+
+  function startLongPress(e) {
+    if (state.multiselectMode) return;
+    if (e.target.closest('.note-action-btn')) return;
+    if (e.target.closest('.note-resize-handle')) return;
+    longPressTimer = setTimeout(() => {
+      if (navigator.vibrate) navigator.vibrate(40);
+      enterMultiselectMode(noteId, card);
+    }, LONG_PRESS_MS);
+  }
+  function cancelLongPress() { clearTimeout(longPressTimer); }
+
+  card.addEventListener('mousedown', startLongPress);
+  card.addEventListener('mouseup',   cancelLongPress);
+  card.addEventListener('mouseleave',cancelLongPress);
+  card.addEventListener('touchstart', startLongPress, { passive: true });
+  card.addEventListener('touchend',   cancelLongPress);
+  card.addEventListener('touchcancel',cancelLongPress);
+  card.addEventListener('touchmove', (e) => {
+    const dx = Math.abs((e.touches[0]?.clientX||0) - (card._touchStartX||0));
+    const dy = Math.abs((e.touches[0]?.clientY||0) - (card._touchStartY||0));
+    if (dx > 8 || dy > 8) cancelLongPress();
+  });
+  card.addEventListener('touchstart', (e) => {
+    card._touchStartX = e.touches[0]?.clientX;
+    card._touchStartY = e.touches[0]?.clientY;
+  }, { passive: true });
+}
+
+function enterMultiselectMode(noteId, card) {
+  state.multiselectMode = true;
+  state.selectedNoteIds = new Set([noteId]);
+  document.body.classList.add('multiselect-mode');
+  card.classList.add('multiselect-selected');
+  updateMultiselectBar();
+  pushHistoryLayer();
+}
+
+function exitMultiselectMode() {
+  state.multiselectMode = false;
+  state.selectedNoteIds.clear();
+  document.body.classList.remove('multiselect-mode');
+  document.getElementById('multiselect-bar').classList.remove('active');
+  document.querySelectorAll('.note-card.multiselect-selected').forEach(c => c.classList.remove('multiselect-selected'));
+}
+
+function toggleCardSelect(noteId, card) {
+  if (state.selectedNoteIds.has(noteId)) {
+    state.selectedNoteIds.delete(noteId);
+    card.classList.remove('multiselect-selected');
+  } else {
+    state.selectedNoteIds.add(noteId);
+    card.classList.add('multiselect-selected');
+  }
+  updateMultiselectBar();
+}
+
+function updateMultiselectBar() {
+  const bar = document.getElementById('multiselect-bar');
+  const count = state.selectedNoteIds.size;
+  bar.classList.toggle('active', count > 0 || state.multiselectMode);
+  document.getElementById('multiselect-count').textContent = `${count}件選択中`;
+  document.querySelector('.multiselect-trash-btn').textContent = `🗑️ ${count}件をゴミ箱へ`;
+}
+
+function bulkTrash() {
+  if (state.selectedNoteIds.size === 0) {
+    showToast('メモが選択されていません');
+    return;
+  }
+  const count = state.selectedNoteIds.size;
+  state.selectedNoteIds.forEach(id => {
+    const n = state.notes.find(n => n.id === id);
+    if (n) { n.deleted = true; n.updatedAt = Date.now(); }
+  });
+  save();
+  exitMultiselectMode();
+  renderSidebar();
+  renderNotes();
+  showToast(`${count}件をゴミ箱に移動しました`);
+}
+
+// ====== カードリサイズ ======
+function setupCardResize(card, noteId) {
+  const handle = card.querySelector('.note-resize-handle');
+  if (!handle) return;
+
+  let startX, startY, startW, startH;
+
+  function onResizeStart(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    const point = e.touches ? e.touches[0] : e;
+    startX = point.clientX;
+    startY = point.clientY;
+    startW = card.offsetWidth;
+    startH = card.offsetHeight;
+
+    document.addEventListener('mousemove', onResizeMove);
+    document.addEventListener('touchmove', onResizeMove, { passive: false });
+    document.addEventListener('mouseup',   onResizeEnd);
+    document.addEventListener('touchend',  onResizeEnd);
+  }
+
+  function onResizeMove(e) {
+    e.preventDefault();
+    const point = e.touches ? e.touches[0] : e;
+    const dw = point.clientX - startX;
+    const dh = point.clientY - startY;
+    const newW = Math.max(160, startW + dw);
+    const newH = Math.max(110, startH + dh);
+    card.style.width  = newW + 'px';
+    card.style.height = newH + 'px';
+  }
+
+  function onResizeEnd() {
+    state.cardSizes[noteId] = { w: card.offsetWidth, h: card.offsetHeight };
+    save();
+    document.removeEventListener('mousemove', onResizeMove);
+    document.removeEventListener('touchmove', onResizeMove);
+    document.removeEventListener('mouseup',   onResizeEnd);
+    document.removeEventListener('touchend',  onResizeEnd);
+  }
+
+  handle.addEventListener('mousedown',  onResizeStart);
+  handle.addEventListener('touchstart', onResizeStart, { passive: false });
+}
+
+// ====== Drag & Drop 並び替え ======
+function setupGridDnD(grid) {
+  let dragSrc = null;
+  let longPressTimer = null;
+  const LONG_PRESS_MS = 400;
+
+  grid.querySelectorAll('.note-card').forEach(card => {
+    card.setAttribute('draggable', 'true');
+
+    card.addEventListener('dragstart', (e) => {
+      if (state.multiselectMode) { e.preventDefault(); return; }
+      if (e.target.closest('.note-resize-handle')) { e.preventDefault(); return; }
+      dragSrc = card;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.id);
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      grid.querySelectorAll('.note-card').forEach(c => c.classList.remove('drag-over'));
+      saveCardOrder();
+    });
+
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (dragSrc && dragSrc !== card) {
+        grid.querySelectorAll('.note-card').forEach(c => c.classList.remove('drag-over'));
+        card.classList.add('drag-over');
+        const cards = [...grid.querySelectorAll('.note-card')];
+        const srcIdx = cards.indexOf(dragSrc);
+        const tgtIdx = cards.indexOf(card);
+        if (srcIdx < tgtIdx) card.after(dragSrc);
+        else card.before(dragSrc);
+      }
+    });
+
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+    });
+
+    // スマホ長押しDnD（一括選択モード中は無効）
+    let touchStartX, touchStartY;
+    let isDraggingTouch = false;
+    let touchDragClone = null;
+
+    card.addEventListener('touchstart', (e) => {
+      if (state.multiselectMode) return;
+      if (e.target.closest('.note-resize-handle')) return;
+      if (e.target.closest('.note-action-btn')) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+
+      longPressTimer = setTimeout(() => {
+        isDraggingTouch = true;
+        dragSrc = card;
+        card.classList.add('dragging');
+        if (navigator.vibrate) navigator.vibrate(30);
+
+        touchDragClone = card.cloneNode(true);
+        touchDragClone.style.cssText = `
+          position:fixed; z-index:9999; pointer-events:none;
+          opacity:0.75; transform:scale(1.06) rotate(2deg);
+          width:${card.offsetWidth}px; height:${card.offsetHeight}px;
+          left:${touchStartX - card.offsetWidth/2}px;
+          top:${touchStartY - card.offsetHeight/2}px;
+          transition:none;
+        `;
+        document.body.appendChild(touchDragClone);
+      }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (e) => {
+      if (!isDraggingTouch) {
+        const dx = Math.abs(e.touches[0].clientX - touchStartX);
+        const dy = Math.abs(e.touches[0].clientY - touchStartY);
+        if (dx > 8 || dy > 8) clearTimeout(longPressTimer);
+        return;
+      }
+      e.preventDefault();
+      const touch = e.touches[0];
+
+      if (touchDragClone) {
+        touchDragClone.style.left = (touch.clientX - card.offsetWidth/2) + 'px';
+        touchDragClone.style.top  = (touch.clientY - card.offsetHeight/2) + 'px';
+      }
+
+      touchDragClone && (touchDragClone.style.display = 'none');
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      touchDragClone && (touchDragClone.style.display = '');
+      const target = el?.closest('.note-card');
+
+      if (target && target !== card && target.closest('.notes-grid') === grid) {
+        grid.querySelectorAll('.note-card').forEach(c => c.classList.remove('drag-over'));
+        target.classList.add('drag-over');
+        const cards = [...grid.querySelectorAll('.note-card')];
+        const srcIdx = cards.indexOf(card);
+        const tgtIdx = cards.indexOf(target);
+        if (srcIdx < tgtIdx) target.after(card);
+        else target.before(card);
+      }
+    }, { passive: false });
+
+    card.addEventListener('touchend', () => {
+      clearTimeout(longPressTimer);
+      if (isDraggingTouch) {
+        card.classList.remove('dragging');
+        grid.querySelectorAll('.note-card').forEach(c => c.classList.remove('drag-over'));
+        if (touchDragClone) { touchDragClone.remove(); touchDragClone = null; }
+        saveCardOrder();
+      }
+      isDraggingTouch = false;
+      dragSrc = null;
+    });
+
+    card.addEventListener('touchcancel', () => {
+      clearTimeout(longPressTimer);
+      isDraggingTouch = false;
+      dragSrc = null;
+      card.classList.remove('dragging');
+      if (touchDragClone) { touchDragClone.remove(); touchDragClone = null; }
+    });
+  });
+}
+
+function saveCardOrder() {
+  const viewKey = state.activeView;
+  const order = [];
+  document.querySelectorAll('.notes-grid .note-card').forEach(c => {
+    if (c.dataset.id) order.push(c.dataset.id);
+  });
+  state.cardOrder[viewKey] = order;
+  save();
+}
+
+function escHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ====== NOTE ACTIONS ======
+function trashNote(id) {
+  const n = state.notes.find(n=>n.id===id);
+  if (n) { n.deleted=true; n.updatedAt=Date.now(); }
+  save(); renderSidebar(); renderNotes();
+  showToast('ゴミ箱に移動しました');
+}
+function restoreNote(id) {
+  const n = state.notes.find(n=>n.id===id);
+  if (n) { n.deleted=false; n.updatedAt=Date.now(); }
+  save(); renderSidebar(); renderNotes();
+  showToast('メモを復元しました ✓');
+}
+function confirmDelete(id) {
+  state.pendingDeleteId = id;
+  document.getElementById('trash-confirm').classList.add('open');
+  pushHistoryLayer();
+}
+function closeConfirm() {
+  state.pendingDeleteId = null;
+  document.getElementById('trash-confirm').classList.remove('open');
+}
+function permanentDelete() {
+  state.notes = state.notes.filter(n=>n.id!==state.pendingDeleteId);
+  save(); closeConfirm(); renderSidebar(); renderNotes();
+  showToast('完全削除しました');
+}
+function quickPin(id) {
+  const n = state.notes.find(n=>n.id===id);
+  if (n) { n.pinned=!n.pinned; n.updatedAt=Date.now(); }
+  save(); renderNotes(); renderSidebar();
+  showToast(n?.pinned?'ピン留めしました 📌':'ピン留めを解除');
+}
+
+// ====== ★新機能4: タイトル/本文の抽出 ======
+// エディタの1行目をタイトル、2行目以降を本文として分離する
+function extractTitleBody() {
+  const editor = document.getElementById('note-editor');
+  const html = editor.innerHTML;
+
+  // テキストノードやインライン要素が直接ある場合（改行で分割）
+  // ブロック要素（div, p, br）で分割して1行目=タイトル
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+
+  let titleHTML = '';
+  let bodyHTML = '';
+
+  // 子ノードを順に処理
+  const children = Array.from(tempDiv.childNodes);
+  let titleDone = false;
+  let titleNodes = [];
+  let bodyNodes = [];
+
+  for (let i = 0; i < children.length; i++) {
+    const node = children[i];
+    if (!titleDone) {
+      if (node.nodeType === Node.ELEMENT_NODE && (node.tagName === 'DIV' || node.tagName === 'P')) {
+        if (titleNodes.length === 0) {
+          // 最初のブロック要素の中身をHTMLのままタイトルに
+          titleHTML = node.innerHTML;
+          titleDone = true;
+        } else {
+          titleDone = true;
+          bodyNodes.push(node);
+        }
+      } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'BR') {
+        titleDone = true;
+      } else {
+        titleNodes.push(node);
+      }
+    } else {
+      bodyNodes.push(node);
+    }
+  }
+
+  // titleNodes からHTML抽出（インラインスタイル・色タグを保持）
+  if (titleNodes.length > 0) {
+    const t = document.createElement('div');
+    titleNodes.forEach(n => t.appendChild(n.cloneNode(true)));
+    titleHTML = t.innerHTML.trim();
+    const b = document.createElement('div');
+    bodyNodes.forEach(n => b.appendChild(n.cloneNode(true)));
+    bodyHTML = b.innerHTML;
+  } else if (titleHTML) {
+    const b = document.createElement('div');
+    bodyNodes.forEach(n => b.appendChild(n.cloneNode(true)));
+    bodyHTML = b.innerHTML;
+  } else {
+    // フォールバック
+    const lines = editor.innerText.split('\n').filter(l => l.trim() !== '');
+    titleHTML = escHTML(lines[0] || '');
+    bodyHTML = html;
+  }
+
+  return { title: titleHTML || '', body: bodyHTML || html };
+}
+
+// ====== MODAL ======
+function openNewNote() {
+  state.editingId = null;
+  // ★新機能2: デフォルトカラーを使用
+  state.tempColor = state.defaultNoteColor || 'yellow';
+  state.tempImages = [];
+  state.tempAudios = [];
+  state.tempPinned = false;
+  state.savedRange = null;
+  const editor = document.getElementById('note-editor');
+  editor.innerHTML = '';
+  document.getElementById('note-images-area').innerHTML = '';
+  document.getElementById('audio-memos-area').innerHTML = '';
+  // スタンプパネルを閉じる
+  document.querySelector('.stamp-section').classList.remove('open');
+  const stampBtn = document.getElementById('stamp-toggle-btn');
+  if (stampBtn) stampBtn.classList.remove('active');
+  updatePinToggle();
+  const initCat = (state.activeView !== 'all' && state.activeView !== 'trash') ? state.activeView : undefined;
+  updateModalCatSelect(initCat);
+  const actualCat = document.getElementById('modal-cat-select').value;
+  if (actualCat) applyColorFromCategory(actualCat);
+  updateColorPaletteUI();
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => editor.focus(), 120);
+  pushHistoryLayer();
+}
+
+function openEditNote(id) {
+  const n = state.notes.find(n=>n.id===id);
+  if (!n) return;
+  state.editingId = id;
+  state.tempColor = n.color || 'yellow';
+  state.tempImages = [...(n.images||[])];
+  state.tempAudios = [...(n.audios||[])];
+  state.tempPinned = !!n.pinned;
+  state.savedRange = null;
+
+  // タイトル+本文を結合してエディタに表示（n.titleはHTML文字列なのでそのまま展開）
+  const editor = document.getElementById('note-editor');
+  if (n.title && n.body) {
+    editor.innerHTML = `<div>${n.title}</div><div>${n.body}</div>`;
+  } else if (n.title) {
+    editor.innerHTML = `<div>${n.title}</div>`;
+  } else {
+    editor.innerHTML = n.body || '';
+  }
+
+  renderImageThumbs();
+  renderAudioThumbs();
+  // スタンプパネルを閉じる
+  document.querySelector('.stamp-section').classList.remove('open');
+  const stampBtn = document.getElementById('stamp-toggle-btn');
+  if (stampBtn) stampBtn.classList.remove('active');
+  const cat = state.categories.find(c => c.id === n.category);
+  if (cat && cat.color) state.tempColor = cat.color;
+  updateColorPaletteUI();
+  updatePinToggle();
+  updateModalCatSelect(n.category);
+  document.getElementById('modal-overlay').classList.add('open');
+  pushHistoryLayer();
+}
+
+// エディタ内テキスト用エスケープ（スタンプなど既存HTMLは通さない）
+function escHTMLForEditor(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function saveNoteIfNeeded() {
+  const { title, body } = extractTitleBody();
+  if (title || body || state.tempImages.length || state.tempAudios.length) {
+    const category = document.getElementById('modal-cat-select').value;
+    applyColorFromCategory(category);
+    const colorToSave = state.tempColor;
+    if (state.editingId) {
+      const n = state.notes.find(n => n.id === state.editingId);
+      if (n) {
+        Object.assign(n, { title, body, color: colorToSave, images: [...state.tempImages], audios: [...state.tempAudios], category, pinned: state.tempPinned, updatedAt: Date.now() });
+      } else {
+        state.notes.unshift({ id: state.editingId, title, body, color: colorToSave, images: [...state.tempImages], audios: [...state.tempAudios], category, pinned: state.tempPinned, deleted: false, createdAt: Date.now(), updatedAt: Date.now() });
+      }
+    } else {
+      state.notes.unshift({ id: 'n_'+Date.now(), title, body, color: colorToSave, images: [...state.tempImages], audios: [...state.tempAudios], category, pinned: state.tempPinned, deleted: false, createdAt: Date.now(), updatedAt: Date.now() });
+    }
+    save(); renderSidebar(); renderNotes();
+    showToast('自動保存しました ✓');
+  }
+  closeModal();
+}
+
+function closeModal() {
+  if (state.isRecording) stopAudioRecord();
+  document.getElementById('modal-overlay').classList.remove('open');
+  state.editingId = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function saveNote() {
+  const { title, body } = extractTitleBody();
+  const category = document.getElementById('modal-cat-select').value;
+
+  if (!title && !body && !state.tempImages.length && !state.tempAudios.length) {
+    showToast('内容を入力してください');
+    return;
+  }
+
+  applyColorFromCategory(category);
+  const colorToSave = state.tempColor;
+
+  if (state.editingId) {
+    // 既存メモ or 自動保存で仮IDが発行済みの新規メモ
+    const n = state.notes.find(n=>n.id===state.editingId);
+    if (n) {
+      Object.assign(n, { title, body, color: colorToSave, images:[...state.tempImages], audios:[...state.tempAudios], category, pinned:state.tempPinned, updatedAt:Date.now() });
+    } else {
+      // 万が一見つからない場合は新規追加
+      state.notes.unshift({
+        id: state.editingId, title, body,
+        color: colorToSave, images:[...state.tempImages], audios:[...state.tempAudios],
+        category, pinned:state.tempPinned,
+        deleted:false, createdAt:Date.now(), updatedAt:Date.now(),
+      });
+    }
+  } else {
+    state.notes.unshift({
+      id:'n_'+Date.now(), title, body,
+      color: colorToSave, images:[...state.tempImages], audios:[...state.tempAudios],
+      category, pinned:state.tempPinned,
+      deleted:false, createdAt:Date.now(), updatedAt:Date.now(),
+    });
+  }
+  save(); closeModal(); renderSidebar(); renderNotes();
+  showToast('保存しました ✓');
+}
+
+// ====== TOOLBAR ======
+function execCmd(cmd) {
+  document.getElementById('note-editor').focus();
+  document.execCommand(cmd, false, null);
+}
+
+// ====== マーカー ======
+function buildMarkerPicker() {
+  const popup = document.getElementById('marker-popup');
+  MARKER_COLORS.forEach(mc => {
+    const dot = document.createElement('div');
+    dot.className = 'marker-dot';
+    dot.style.background = mc.bg;
+    dot.style.borderColor = mc.border;
+    dot.title = mc.label;
+    dot.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      state.currentMarkerColor = mc;
+      applyMarker(mc.bg);
+      closeAllPopups();
+    });
+    popup.appendChild(dot);
+  });
+  const erase = document.createElement('div');
+  erase.className = 'marker-erase';
+  erase.title = 'マーカーを消す';
+  erase.textContent = '✕';
+  erase.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    removeMarker();
+    closeAllPopups();
+  });
+  popup.appendChild(erase);
+}
+
+function toggleMarkerPicker(e) {
+  e.stopPropagation();
+  const popup = document.getElementById('marker-popup');
+  const tcPopup = document.getElementById('text-color-popup');
+  tcPopup.classList.remove('open');
+  popup.classList.toggle('open');
+}
+
+function applyMarker(bgColor) {
+  const editor = document.getElementById('note-editor');
+  editor.focus();
+  const sel = window.getSelection();
+  if (sel && sel.toString().length > 0) {
+    const text = sel.toString();
+    document.execCommand('insertHTML', false,
+      `<mark style="background:${bgColor};border-radius:3px;padding:0 2px">${text}</mark>`);
+  }
+}
+
+function removeMarker() {
+  const editor = document.getElementById('note-editor');
+  editor.focus();
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  let node = range.commonAncestorContainer;
+  if (node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+  const mark = node.closest('mark');
+  if (mark) {
+    const parent = mark.parentNode;
+    while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+    parent.removeChild(mark);
+  }
+}
+
+// ====== 文字色 ======
+function buildTextColorPicker() {
+  const popup = document.getElementById('text-color-popup');
+  TEXT_COLORS.forEach(color => {
+    const dot = document.createElement('div');
+    dot.className = 'text-color-dot';
+    dot.style.background = color;
+    if (color === '#ffffff') dot.style.border = '2px solid #ccc';
+    dot.title = color;
+    dot.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      state.currentTextColor = color;
+      document.getElementById('text-color-indicator').style.background = color;
+      applyTextColor(color);
+      closeAllPopups();
+    });
+    popup.appendChild(dot);
+  });
+  const reset = document.createElement('div');
+  reset.className = 'text-color-reset';
+  reset.title = '色をリセット';
+  reset.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.execCommand('foreColor', false, 'inherit');
+    document.execCommand('removeFormat', false, null);
+    const editor = document.getElementById('note-editor');
+    editor.focus();
+    const sel = window.getSelection();
+    if (sel && sel.toString()) {
+      document.execCommand('foreColor', false, '#4a3f3a');
+    }
+    closeAllPopups();
+  });
+  popup.appendChild(reset);
+  document.getElementById('text-color-indicator').style.background = state.currentTextColor;
+}
+
+function toggleTextColorPicker(e) {
+  e.stopPropagation();
+  const popup = document.getElementById('text-color-popup');
+  const mPopup = document.getElementById('marker-popup');
+  mPopup.classList.remove('open');
+  popup.classList.toggle('open');
+}
+
+function applyTextColor(color) {
+  const editor = document.getElementById('note-editor');
+  editor.focus();
+  if (state.savedRange) {
+    const sel = window.getSelection();
+    try {
+      sel.removeAllRanges();
+      sel.addRange(state.savedRange);
+    } catch(e) {}
+  }
+  document.execCommand('foreColor', false, color);
+}
+
+function closeAllPopups(e) {
+  if (e) {
+    if (e.target.closest('#marker-wrap') || e.target.closest('#text-color-wrap')) return;
+  }
+  document.getElementById('marker-popup').classList.remove('open');
+  document.getElementById('text-color-popup').classList.remove('open');
+}
+
+// ====== CHECK LIST ======
+function makeCheckItemHTML() {
+  const id = 'chk_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  return `<div class="check-item"><input type="checkbox" id="${id}" onchange="this.nextElementSibling.classList.toggle('done',this.checked)"><span contenteditable="true" onkeydown="checkItemKeydown(event,this)"></span></div>`;
+}
+
+function addCheckItem() {
+  const editor = document.getElementById('note-editor');
+  editor.focus();
+  // カーソル位置に挿入してからフォーカスをspanへ移す
+  const html = makeCheckItemHTML();
+  document.execCommand('insertHTML', false, html);
+  // 最後に挿入されたcheck-item spanにフォーカス
+  const items = editor.querySelectorAll('.check-item span[contenteditable]');
+  if (items.length > 0) {
+    const last = items[items.length - 1];
+    last.focus();
+    const range = document.createRange();
+    range.selectNodeContents(last);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+
+function checkItemKeydown(e, el) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // 新しいチェック項目を現在のcheck-itemの直後にDOMで挿入
+    const currentItem = el.closest('.check-item');
+    const editor = document.getElementById('note-editor');
+    const newDiv = document.createElement('div');
+    newDiv.innerHTML = makeCheckItemHTML();
+    const newItem = newDiv.firstElementChild;
+    if (currentItem && currentItem.parentNode) {
+      currentItem.parentNode.insertBefore(newItem, currentItem.nextSibling);
+    } else {
+      editor.appendChild(newItem);
+    }
+    // 新しいspanにフォーカス
+    const newSpan = newItem.querySelector('span[contenteditable]');
+    if (newSpan) {
+      newSpan.focus();
+      const range = document.createRange();
+      range.selectNodeContents(newSpan);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    // 自動保存トリガー
+    editor.dispatchEvent(new Event('input'));
+  } else if (e.key === 'Backspace') {
+    // 空のチェック項目でBackspaceを押したら項目を削除
+    if (el.textContent === '') {
+      e.preventDefault();
+      const currentItem = el.closest('.check-item');
+      if (currentItem) {
+        const prev = currentItem.previousElementSibling;
+        currentItem.remove();
+        // 前の要素にフォーカスを戻す
+        if (prev) {
+          const prevSpan = prev.querySelector ? prev.querySelector('span[contenteditable]') : null;
+          if (prevSpan) {
+            prevSpan.focus();
+            const range = document.createRange();
+            range.selectNodeContents(prevSpan);
+            range.collapse(false);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          } else if (prev.contentEditable === 'true' || prev.getAttribute && prev.getAttribute('contenteditable')) {
+            prev.focus();
+          }
+        }
+        document.getElementById('note-editor').dispatchEvent(new Event('input'));
+      }
+    }
+  }
+}
+
+// ====== COLOR PALETTE ======
+function buildColorPalette() {
+  const palette = document.getElementById('color-palette');
+  NOTE_COLORS.forEach(c => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot';
+    dot.style.background = c.hex;
+    dot.title = c.key;
+    dot.dataset.key = c.key;
+    dot.onclick = () => { state.tempColor = c.key; updateColorPaletteUI(); };
+    palette.appendChild(dot);
+  });
+}
+function updateColorPaletteUI() {
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('selected', d.dataset.key === state.tempColor));
+}
+
+// ====== PIN ======
+function togglePin() { state.tempPinned = !state.tempPinned; updatePinToggle(); }
+function updatePinToggle() {
+  const btn = document.getElementById('pin-toggle');
+  btn.classList.toggle('pinned', state.tempPinned);
+  btn.textContent = state.tempPinned ? '📌 ピン留め中' : '📍 ピン留め';
+}
+
+// ====== MODAL CAT SELECT ======
+function updateModalCatSelect(selected) {
+  const sel = document.getElementById('modal-cat-select');
+  const cats = state.categories.filter(c => c.id !== 'all');
+  sel.innerHTML = cats.length
+    ? cats.map(c => `<option value="${c.id}"${selected===c.id?' selected':''}>${c.icon} ${escHTML(c.name)}</option>`)
+          .join('')
+    : '<option value="">カテゴリなし</option>';
+  sel.onchange = null;
+  sel.onchange = () => {
+    applyColorFromCategory(sel.value);
+  };
+}
+
+// ====== IMAGES ======
+function handleImageAdd(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { state.tempImages.push(ev.target.result); renderImageThumbs(); };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+function renderImageThumbs() {
+  document.getElementById('note-images-area').innerHTML = state.tempImages.map((src,i) =>
+    `<div class="note-image-thumb"><img src="${src}" alt=""><button class="remove-img" onclick="removeImage(${i})">✕</button></div>`
+  ).join('');
+}
+function removeImage(i) { state.tempImages.splice(i,1); renderImageThumbs(); }
+
+// ====== STAMP TOGGLE ======
+function toggleStampSection() {
+  const section = document.querySelector('.stamp-section');
+  const btn = document.getElementById('stamp-toggle-btn');
+  const isOpen = section.classList.toggle('open');
+  btn.classList.toggle('active', isOpen);
+}
+
+// ====== STAMP ======
+function buildStamps() {
+  const tabs = document.getElementById('stamp-tabs');
+  tabs.innerHTML = Object.keys(STAMP_CATEGORIES).map(cat =>
+    `<div class="stamp-tab${cat===state.activeStampCat?' active':''}" onclick="switchStampCat('${cat}')">${cat}</div>`
+  ).join('');
+  renderStampGrid();
+}
+function switchStampCat(cat) {
+  state.activeStampCat = cat;
+  document.querySelectorAll('.stamp-tab').forEach(t => t.classList.toggle('active', t.textContent===cat));
+  renderStampGrid();
+}
+function renderStampGrid() {
+  document.getElementById('stamp-grid').innerHTML =
+    (STAMP_CATEGORIES[state.activeStampCat]||[]).map(s =>
+      `<button class="stamp-btn" onclick="insertStamp('${s}')" title="${s}">${s}</button>`
+    ).join('');
+}
+
+function saveRange() {
+  const editor = document.getElementById('note-editor');
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) {
+      state.savedRange = range.cloneRange();
+    }
+  }
+}
+
+function insertStamp(emoji) {
+  const editor = document.getElementById('note-editor');
+
+  document.querySelectorAll('.stamp-btn').forEach(b => {
+    if (b.getAttribute('title') === emoji) {
+      b.style.transform = 'scale(1.4)';
+      b.style.background = '#fef0f0';
+      setTimeout(() => { b.style.transform=''; b.style.background=''; }, 220);
+    }
+  });
+
+  editor.focus();
+
+  const stampHTML = `<span class="stamp-inline" contenteditable="false" data-stamp="${emoji}">${emoji}</span>`;
+
+  if (state.savedRange) {
+    const sel = window.getSelection();
+    try {
+      sel.removeAllRanges();
+      sel.addRange(state.savedRange);
+      document.execCommand('insertHTML', false, stampHTML);
+    } catch(e) {
+      editor.innerHTML += stampHTML;
+    }
+  } else {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('insertHTML', false, stampHTML);
+  }
+
+  saveRange();
+
+  if (state.editingId) {
+    const n = state.notes.find(n=>n.id===state.editingId);
+    if (n) { n.body = editor.innerHTML; n.updatedAt = Date.now(); save(); }
+  }
+}
+
+// ====== 音声メモ ======
+async function toggleAudioRecord() {
+  if (state.isRecording) {
+    stopAudioRecord();
+  } else {
+    await startAudioRecord();
+  }
+}
+
+async function startAudioRecord() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    state.audioChunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    state.mediaRecorder = new MediaRecorder(stream, { mimeType });
+    state.mediaRecorder.ondataavailable = e => { if (e.data.size > 0) state.audioChunks.push(e.data); };
+    state.mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(state.audioChunks, { type: mimeType });
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const name = '音声メモ ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        state.tempAudios.push({ dataUrl: ev.target.result, name });
+        renderAudioThumbs();
+        showToast('録音を保存しました 🎙️');
+      };
+      reader.readAsDataURL(blob);
+    };
+    state.mediaRecorder.start();
+    state.isRecording = true;
+    const btn = document.getElementById('audio-rec-btn');
+    btn.classList.add('recording');
+    btn.title = '録音停止';
+    btn.textContent = '⏹️';
+    showToast('🔴 録音中… もう一度押すと停止');
+  } catch(err) {
+    showToast('マイクへのアクセスが許可されていません');
+  }
+}
+
+function stopAudioRecord() {
+  if (state.mediaRecorder && state.isRecording) {
+    state.mediaRecorder.stop();
+    state.isRecording = false;
+    const btn = document.getElementById('audio-rec-btn');
+    btn.classList.remove('recording');
+    btn.title = '音声メモを録音';
+    btn.textContent = '🎙️';
+  }
+}
+
+function renderAudioThumbs() {
+  const area = document.getElementById('audio-memos-area');
+  area.innerHTML = state.tempAudios.map((a, i) => `
+    <div class="audio-memo-wrap">
+      <span class="audio-memo-label">🎙️ ${escHTML(a.name)}</span>
+      <audio controls src="${a.dataUrl}"></audio>
+      <button class="remove-audio" onclick="removeAudio(${i})" title="削除">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeAudio(i) { state.tempAudios.splice(i, 1); renderAudioThumbs(); }
+
+// ====== 手書きメモ ======
+const DRAW_COLORS = ['#4a3f3a','#e53935','#e91e63','#8e24aa','#1e88e5','#00897b','#43a047','#fb8c00','#f4511e','#ffffff'];
+let drawCtx = null, drawIsDrawing = false, drawCurrentColor = '#4a3f3a', drawCurrentSize = 4, drawEraserMode = false;
+
+function openDrawModal() {
+  const canvas = document.getElementById('draw-canvas');
+  canvas._drawInited = false;
+  drawCtx = null;
+  drawEraserMode = false;
+  document.getElementById('draw-modal-overlay').classList.add('open');
+  buildDrawColors();
+  setTimeout(initCanvas, 30);
+}
+
+function closeDrawModal() {
+  document.getElementById('draw-modal-overlay').classList.remove('open');
+}
+
+function buildDrawColors() {
+  const wrap = document.getElementById('draw-colors');
+  wrap.innerHTML = '';
+  wrap.style.cssText = 'display:flex;gap:5px;align-items:center;flex-shrink:0;flex-wrap:wrap;';
+  DRAW_COLORS.forEach(color => {
+    const btn = document.createElement('div');
+    btn.className = 'draw-color-btn' + (color === drawCurrentColor ? ' selected' : '');
+    btn.style.background = color;
+    if (color === '#ffffff') btn.style.border = '3px solid #ccc';
+    btn.title = color;
+    btn.onclick = () => {
+      drawCurrentColor = color;
+      drawEraserMode = false;
+      document.getElementById('draw-eraser-btn').classList.remove('active');
+      document.querySelectorAll('.draw-color-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      if (drawCtx) drawCtx.globalCompositeOperation = 'source-over';
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+function initCanvas() {
+  const canvas = document.getElementById('draw-canvas');
+  const wrap = document.getElementById('draw-canvas-wrap');
+
+  canvas.width  = wrap.clientWidth  || 500;
+  canvas.height = wrap.clientHeight || 340;
+  drawCtx = canvas.getContext('2d');
+  drawCtx.fillStyle = '#ffffff';
+  drawCtx.fillRect(0, 0, canvas.width, canvas.height);
+  drawCtx.lineCap = 'round';
+  drawCtx.lineJoin = 'round';
+
+  if (canvas._drawInited) return;
+  canvas._drawInited = true;
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const pt = e.touches ? e.touches[0] : e;
+    return {
+      x: (pt.clientX - rect.left) * scaleX,
+      y: (pt.clientY - rect.top)  * scaleY,
+    };
+  }
+
+  function drawStart(e) {
+    e.preventDefault();
+    drawIsDrawing = true;
+    const { x, y } = getPos(e);
+    drawCtx.beginPath();
+    drawCtx.moveTo(x, y);
+  }
+  function drawMove(e) {
+    e.preventDefault();
+    if (!drawIsDrawing) return;
+    const { x, y } = getPos(e);
+    drawCtx.globalCompositeOperation = 'source-over';
+    drawCtx.strokeStyle = drawEraserMode ? '#ffffff' : drawCurrentColor;
+    drawCtx.lineWidth   = drawEraserMode ? drawCurrentSize * 4 : drawCurrentSize;
+    drawCtx.lineTo(x, y);
+    drawCtx.stroke();
+    drawCtx.beginPath();
+    drawCtx.moveTo(x, y);
+  }
+  function drawEnd(e) {
+    if (e) e.preventDefault();
+    drawIsDrawing = false;
+    drawCtx.beginPath();
+  }
+
+  canvas.addEventListener('mousedown',  drawStart);
+  canvas.addEventListener('mousemove',  drawMove);
+  canvas.addEventListener('mouseup',    drawEnd);
+  canvas.addEventListener('mouseleave', drawEnd);
+  canvas.addEventListener('touchstart', drawStart, { passive: false });
+  canvas.addEventListener('touchmove',  drawMove,  { passive: false });
+  canvas.addEventListener('touchend',   drawEnd,   { passive: false });
+}
+
+function updateDrawSize(val) {
+  drawCurrentSize = parseInt(val);
+  document.getElementById('draw-size-label').textContent = val + 'px';
+}
+
+function toggleEraser() {
+  drawEraserMode = !drawEraserMode;
+  document.getElementById('draw-eraser-btn').classList.toggle('active', drawEraserMode);
+  if (!drawEraserMode) {
+    document.querySelectorAll('.draw-color-btn').forEach(b => {
+      b.classList.toggle('selected', b.title === drawCurrentColor);
+    });
+  }
+}
+
+function clearCanvas() {
+  if (!drawCtx) return;
+  const c = document.getElementById('draw-canvas');
+  drawCtx.globalCompositeOperation = 'source-over';
+  drawCtx.fillStyle = '#ffffff';
+  drawCtx.fillRect(0, 0, c.width, c.height);
+}
+
+function insertDrawing() {
+  const canvas = document.getElementById('draw-canvas');
+  const dataUrl = canvas.toDataURL('image/png');
+  state.tempImages.push(dataUrl);
+  renderImageThumbs();
+  closeDrawModal();
+  showToast('手書きをメモに追加しました 🎨');
+  drawCtx = null;
+  canvas._drawInited = false;
+}
+
+// ====== 全文コピー ======
+function copyAllText() {
+  const editor = document.getElementById('note-editor');
+  const text = editor.innerText || editor.textContent || '';
+  if (!text.trim()) {
+    showToast('コピーする内容がありません');
+    return;
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('全文コピーしました 📋');
+    }).catch(() => {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showToast('全文コピーしました 📋'); }
+  catch(e) { showToast('コピーに失敗しました'); }
+  document.body.removeChild(ta);
+}
+
+// ====== TOAST ======
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// ====== KEYBOARD ======
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('draw-modal-overlay').classList.contains('open')) { closeDrawModal(); return; }
+    if (document.getElementById('default-color-dialog').classList.contains('open')) { closeDefaultColorDialog(); return; }
+    if (document.getElementById('trash-confirm').classList.contains('open')) closeConfirm();
+    else if (document.getElementById('addcat-dialog').classList.contains('open')) closeAddCat();
+    else if (document.getElementById('modal-overlay').classList.contains('open')) closeModal();
+    else if (state.multiselectMode) exitMultiselectMode();
+    else closeSidebar();
+    closeAllPopups();
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key==='n') { e.preventDefault(); openNewNote(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='s') {
+    e.preventDefault();
+    if (document.getElementById('modal-overlay').classList.contains('open')) saveNote();
+  }
+});
+
+// ====== START ======
+init();
+</script>
+</body>
+</html>
